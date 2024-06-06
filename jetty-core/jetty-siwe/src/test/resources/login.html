@@ -13,11 +13,11 @@
     <input type="hidden" id="signatureField" name="signature">
     <input type="hidden" id="messageField" name="message">
 </form>
-<p class="alert">Result: <span id="siweResult"></span></p>
+<p class="alert" style="display: none;">Result: <span id="siweResult"></span></p>
 
 <script>
-    let provider = window.ethereum; // Reference to the Ethereum provider (e.g., MetaMask)
-    let accounts; // This will store fetched accounts
+    let provider = window.ethereum;
+    let accounts;
 
     if (!provider) {
         document.getElementById('siweResult').innerText = 'MetaMask is not installed. Please install MetaMask to use this feature.';
@@ -49,14 +49,9 @@
             } catch (error) {
                 console.error('Error during login:', error);
                 document.getElementById('siweResult').innerText = `Error: ${error.message}`;
+                document.getElementById('siweResult').parentElement.style.display = 'block';
             }
         });
-    }
-
-    function stringToHex(str) {
-        const encoder = new TextEncoder();
-        const bytes = encoder.encode(str);
-        return bytes.reduce((str, byte) => str + byte.toString(16).padStart(2, '0'), '0x');
     }
 </script>
 </body>

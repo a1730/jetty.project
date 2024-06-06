@@ -90,8 +90,6 @@ public class EthereumAuthenticator extends LoginAuthenticator
 
     public EthereumAuthenticator()
     {
-        // todo: javadoc and documentation
-        //  testing improvements (validation, parsing, end-to-end test, signature verification)
     }
 
     public void includeDomains(String... domains)
