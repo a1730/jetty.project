@@ -131,6 +131,9 @@ public class SessionHandler extends AbstractSessionManager implements Handler.Si
             _requestedSessionId = requestedSession.sessionId();
             ManagedSession session = requestedSession.session();
 
+            // TODO: Implement a better mechanism in core to determine if the Session ID is from a Cookie.
+            response.getRequest().setAttribute("org.eclipse.jetty.session.sessionIdFromCookie", requestedSession.sessionIdFromCookie());
+
             if (session != null)
             {
                 _session.set(session);
