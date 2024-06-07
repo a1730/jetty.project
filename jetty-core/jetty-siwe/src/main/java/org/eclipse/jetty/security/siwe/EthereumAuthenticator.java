@@ -24,10 +24,12 @@ import java.util.concurrent.ExecutionException;
 import java.util.function.Function;
 
 import org.eclipse.jetty.http.BadMessageException;
+import org.eclipse.jetty.http.HttpHeader;
 import org.eclipse.jetty.http.HttpMethod;
 import org.eclipse.jetty.http.HttpStatus;
 import org.eclipse.jetty.http.HttpURI;
 import org.eclipse.jetty.http.HttpVersion;
+import org.eclipse.jetty.http.MimeTypes;
 import org.eclipse.jetty.http.MultiPartFormData;
 import org.eclipse.jetty.io.Content;
 import org.eclipse.jetty.io.content.ByteBufferContentSource;
@@ -54,6 +56,8 @@ import org.eclipse.jetty.util.URIUtil;
 import org.eclipse.jetty.util.UrlEncoded;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import static org.eclipse.jetty.server.FormFields.getFormEncodedCharset;
 
 public class EthereumAuthenticator extends LoginAuthenticator
 {
@@ -424,16 +428,36 @@ public class EthereumAuthenticator extends LoginAuthenticator
         {
             InputStream inputStream = Content.Source.asInputStream(request);
             String requestContent = readMessage(inputStream);
+            ByteBufferContentSource contentSource = new ByteBufferContentSource(BufferUtil.toBuffer(requestContent));
 
-            MultiPartFormFields.Config config = new MultiPartFormFields.Config(10, 1024 * 8, -1, -1, null, null);
-            MultiPartFormData.Parts parts = MultiPartFormFields.from(request, new ByteBufferContentSource(BufferUtil.toBuffer(requestContent)), config).get();
+            String contentType = request.getHeaders().get(HttpHeader.CONTENT_TYPE);
+            MimeTypes.Type mimeType = MimeTypes.getBaseType(contentType);
+            if (mimeType == null)
+                throw new ServerAuthException("Unsupported content type: " + contentType);
 
-            String signature = parts.getFirst("signature").getContentAsString(StandardCharsets.ISO_8859_1);
-            String message = parts.getFirst("message").getContentAsString(StandardCharsets.ISO_8859_1);
+            String signature;
+            String message;
+            switch (mimeType)
+            {
+                case FORM_ENCODED ->
+                {
+                    Fields fields = FormFields.from(contentSource, request, getFormEncodedCharset(request), 100, 1024 * 8).get();
+                    signature = fields.get("signature").getValue();
+                    message = fields.get("message").getValue();
+                }
+                case MULTIPART_FORM_DATA ->
+                {
+                    MultiPartFormFields.Config config = new MultiPartFormFields.Config(10, 1024 * 8, -1, -1, null, null);
+                    MultiPartFormData.Parts parts = MultiPartFormFields.from(request, contentSource, config).get();
+
+                    signature = parts.getFirst("signature").getContentAsString(StandardCharsets.ISO_8859_1);
+                    message = parts.getFirst("message").getContentAsString(StandardCharsets.ISO_8859_1);
+                }
+                default -> throw new ServerAuthException("Unsupported mime type: " + mimeType);
+            };
 
             // The browser may convert LF to CRLF, EIP4361 specifies to only use LF.
             message = message.replace("\r\n", "\n");
-
             return new SignedMessage(message, signature);
         }
         catch (Throwable t)
