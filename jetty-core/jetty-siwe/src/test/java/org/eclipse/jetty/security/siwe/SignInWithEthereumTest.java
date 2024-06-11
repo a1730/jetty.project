@@ -42,6 +42,7 @@ import org.eclipse.jetty.util.Callback;
 import org.eclipse.jetty.util.ajax.JSON;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -49,6 +50,7 @@ import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+@Disabled("waiting on https://github.com/jetty/jetty.project/pull/11906")
 public class SignInWithEthereumTest
 {
     private final EthereumCredentials _credentials = new EthereumCredentials();
