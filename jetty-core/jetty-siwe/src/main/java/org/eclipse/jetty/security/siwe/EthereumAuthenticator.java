@@ -16,7 +16,6 @@ package org.eclipse.jetty.security.siwe;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
-import java.nio.charset.StandardCharsets;
 import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.Set;
@@ -30,7 +29,6 @@ import org.eclipse.jetty.http.HttpStatus;
 import org.eclipse.jetty.http.HttpURI;
 import org.eclipse.jetty.http.HttpVersion;
 import org.eclipse.jetty.http.MimeTypes;
-import org.eclipse.jetty.http.MultiPartFormData;
 import org.eclipse.jetty.io.Content;
 import org.eclipse.jetty.io.content.ByteBufferContentSource;
 import org.eclipse.jetty.security.AuthenticationState;
@@ -42,7 +40,6 @@ import org.eclipse.jetty.security.UserIdentity;
 import org.eclipse.jetty.security.authentication.LoginAuthenticator;
 import org.eclipse.jetty.security.authentication.SessionAuthentication;
 import org.eclipse.jetty.server.FormFields;
-import org.eclipse.jetty.server.MultiPartFormFields;
 import org.eclipse.jetty.server.Request;
 import org.eclipse.jetty.server.Response;
 import org.eclipse.jetty.server.Session;
@@ -447,11 +444,14 @@ public class EthereumAuthenticator extends LoginAuthenticator
                 }
                 case MULTIPART_FORM_DATA ->
                 {
+                    /*
+                    // TODO: Waiting on https://github.com/jetty/jetty.project/pull/11906
                     MultiPartFormFields.Config config = new MultiPartFormFields.Config(10, 1024 * 8, -1, -1, null, null);
                     MultiPartFormData.Parts parts = MultiPartFormFields.from(request, contentSource, config).get();
-
                     signature = parts.getFirst("signature").getContentAsString(StandardCharsets.ISO_8859_1);
                     message = parts.getFirst("message").getContentAsString(StandardCharsets.ISO_8859_1);
+                     */
+                    throw new ServerAuthException("Unsupported mime type: " + mimeType);
                 }
                 default -> throw new ServerAuthException("Unsupported mime type: " + mimeType);
             };
