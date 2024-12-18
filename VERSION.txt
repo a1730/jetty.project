@@ -1,4 +1,29 @@
-jetty-12.0.16-SNAPSHOT
+jetty-12.0.17-SNAPSHOT
+
+jetty-12.0.16 - 09 December 2024
+ + 9529 Expose TCP connection establishment information
+ + 11413 Conscrypt does not support server-side SNI
+ + 12153 Failed to serve resource java.lang.IllegalStateException: s=HANDLING
+   rs=ASYNC os=OPEN is=IDLE awp=false se=false i=true al=0
+ + 12272 Potential deadlock with Vaadin
+ + 12323 AsyncMiddleManServlet response flushing
+ + 12429 HandshakeRequest getHeaders are case sensitive.
+ + 12469 Content.Sink.write(sink, last, utf8Content, callback) could become
+   faster
+ + 12481 Exception when a Content-Length is set on a 304 response
+ + 12482 CustomRequestLog %q inconsistency with a doc
+ + 12488 HTTP/2 headers may not be split in CONTINUATION frames
+ + 12496 MultiPartFormData.Parser question.
+ + 12520 Numerous stack traces logged at warning level when running under
+   HTTP/2 (regression in 12.0.15)
+ + 12553 Execute immediately HTTP/2 failures
+ + 12577 org.eclipse.jetty.http.HttpURI.getDecodedPath() throws an NPE when
+   there is no path
+ + 12578 HttpServletRequest.getParameterMap - UnmodifiableMap does not wrap a
+   jetty MultiMap
+ + 12588 oejhs.AbstractHTTP2ServerConnectionFactory installs the
+   HTTP2SessionContainer bean twice
+ + 12603 ee9 / UnsupportedOperationException: Read Only
 
 jetty-12.0.15 - 05 November 2024
  + 5685 AsyncProxyServlet calls onProxyResponseSuccess() when internally it
