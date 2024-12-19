@@ -16,6 +16,7 @@ package org.eclipse.jetty.alpn.bouncycastle.server;
 import java.util.List;
 import java.util.function.BiFunction;
 import javax.net.ssl.SSLEngine;
+
 import org.eclipse.jetty.alpn.server.ALPNServerConnection;
 import org.eclipse.jetty.io.Connection;
 import org.eclipse.jetty.io.ssl.ALPNProcessor;
@@ -24,9 +25,9 @@ import org.eclipse.jetty.io.ssl.SslHandshakeListener;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class BouncycastleServerALPNProcessor implements ALPNProcessor.Server
+public class BouncyCastleServerALPNProcessor implements ALPNProcessor.Server
 {
-    private static final Logger LOG = LoggerFactory.getLogger(BouncycastleServerALPNProcessor.class);
+    private static final Logger LOG = LoggerFactory.getLogger(BouncyCastleServerALPNProcessor.class);
 
     @Override
     public boolean appliesTo(SSLEngine sslEngine)

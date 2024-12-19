@@ -11,14 +11,15 @@
 // ========================================================================
 //
 
-package org.eclipse.jetty.alpn.conscrypt.server;
+package org.eclipse.jetty.alpn.bouncycastle.server;
 
 import java.io.File;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.security.Security;
 
-import org.conscrypt.OpenSSLProvider;
+import org.bouncycastle.jcajce.provider.BouncyCastleFipsProvider;
+import org.bouncycastle.jsse.provider.BouncyCastleJsseProvider;
 import org.eclipse.jetty.alpn.server.ALPNServerConnectionFactory;
 import org.eclipse.jetty.client.ContentResponse;
 import org.eclipse.jetty.client.HttpClient;
@@ -36,24 +37,20 @@ import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.ServerConnector;
 import org.eclipse.jetty.server.SslConnectionFactory;
 import org.eclipse.jetty.util.Callback;
-import org.eclipse.jetty.util.JavaVersion;
 import org.eclipse.jetty.util.ssl.SslContextFactory;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.condition.DisabledOnOs;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-/**
- * Test server that verifies that the Conscrypt ALPN mechanism works for both server and client side
- */
-@DisabledOnOs(architectures = "aarch64", disabledReason = "Conscrypt does not provide aarch64 native libs as of version 2.5.2")
-public class ConscryptHTTP2ServerTest
+public class BouncyCastleHTTP2ServerTest
 {
     static
     {
-        Security.addProvider(new OpenSSLProvider());
+        /* Required to instantiate a DEFAULT SecureRandom */
+        Security.insertProviderAt(new BouncyCastleFipsProvider(), 1);
+        Security.insertProviderAt(new BouncyCastleJsseProvider(), 2);
     }
 
     private final HttpConfiguration httpsConfig = new HttpConfiguration();
@@ -80,12 +77,7 @@ public class ConscryptHTTP2ServerTest
         File keys = path.resolve("keystore.p12").toFile();
         sslContextFactory.setKeyStorePath(keys.getAbsolutePath());
         sslContextFactory.setKeyStorePassword("storepwd");
-        sslContextFactory.setProvider("Conscrypt");
-        if (JavaVersion.VERSION.getPlatform() < 9)
-        {
-            // Conscrypt enables TLSv1.3 by default but it's not supported in Java 8.
-            sslContextFactory.addExcludeProtocols("TLSv1.3");
-        }
+        sslContextFactory.setProvider(BouncyCastleJsseProvider.PROVIDER_NAME);
     }
 
     @BeforeEach
@@ -94,7 +86,7 @@ public class ConscryptHTTP2ServerTest
         httpsConfig.setSecureScheme("https");
         httpsConfig.setSendXPoweredBy(true);
         httpsConfig.setSendServerVersion(true);
-        httpsConfig.addCustomizer(new SecureRequestCustomizer());
+        httpsConfig.addCustomizer(new SecureRequestCustomizer(false));
 
         HttpConnectionFactory http = new HttpConnectionFactory(httpsConfig);
         HTTP2ServerConnectionFactory h2 = new HTTP2ServerConnectionFactory(httpsConfig);
@@ -140,11 +132,4 @@ public class ConscryptHTTP2ServerTest
         }
     }
 
-    @Test
-    public void testSNIRequired() throws Exception
-    {
-        // The KeyStore contains 1 certificate with two DNS names.
-        httpsConfig.getCustomizer(SecureRequestCustomizer.class).setSniRequired(true);
-        testSimpleRequest();
-    }
 }

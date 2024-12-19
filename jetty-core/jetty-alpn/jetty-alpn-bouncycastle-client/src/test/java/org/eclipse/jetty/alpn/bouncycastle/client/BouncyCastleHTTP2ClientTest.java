@@ -11,15 +11,15 @@
 // ========================================================================
 //
 
-package org.eclipse.jetty.alpn.java.client;
-
-import static org.junit.jupiter.api.Assertions.assertTrue;
+package org.eclipse.jetty.alpn.bouncycastle.client;
 
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.security.Security;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+
+import org.bouncycastle.jcajce.provider.BouncyCastleFipsProvider;
 import org.bouncycastle.jsse.provider.BouncyCastleJsseProvider;
 import org.eclipse.jetty.http.HttpFields;
 import org.eclipse.jetty.http.HttpURI;
@@ -37,20 +37,24 @@ import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
-public class BouncycastleHTTP2ClientTest
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+public class BouncyCastleHTTP2ClientTest
 {
     @Tag("external")
     @Test
-    public void testBouncycastleHTTP2Client() throws Exception
+    public void testBouncyCastleHTTP2Client() throws Exception
     {
         String host = "webtide.com";
         int port = 443;
 
         Assumptions.assumeTrue(canConnectTo(host, port));
 
-        Security.insertProviderAt(new BouncyCastleJsseProvider(), 1);
+        /* Required to instantiate a DEFAULT SecureRandom */
+        Security.insertProviderAt(new BouncyCastleFipsProvider(), 1);
+        Security.insertProviderAt(new BouncyCastleJsseProvider(), 2);
         SslContextFactory.Client sslContextFactory = new SslContextFactory.Client();
-        sslContextFactory.setProvider("BCJSSE");
+        sslContextFactory.setProvider(BouncyCastleJsseProvider.PROVIDER_NAME);
 
         try (HTTP2Client client = new HTTP2Client())
         {

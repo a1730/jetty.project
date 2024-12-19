@@ -11,13 +11,16 @@
 // ========================================================================
 //
 
+import org.eclipse.jetty.alpn.bouncycastle.client.BouncyCastleClientALPNProcessor;
+
 module org.eclipse.jetty.alpn.bouncycastle.client
 {
     requires org.slf4j;
 
     requires transitive org.eclipse.jetty.alpn.client;
+    requires org.bouncycastle.fips.core;
     requires org.bouncycastle.fips.tls;
 
     provides org.eclipse.jetty.io.ssl.ALPNProcessor.Client with
-        org.eclipse.jetty.alpn.bouncycastle.client.BouncycastleClientALPNProcessor;
+            BouncyCastleClientALPNProcessor;
 }

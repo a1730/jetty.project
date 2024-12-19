@@ -17,6 +17,8 @@ import java.security.Security;
 import java.util.List;
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLParameters;
+
+import org.bouncycastle.jcajce.provider.BouncyCastleFipsProvider;
 import org.bouncycastle.jsse.provider.BouncyCastleJsseProvider;
 import org.eclipse.jetty.alpn.client.ALPNClientConnection;
 import org.eclipse.jetty.io.Connection;
@@ -26,14 +28,21 @@ import org.eclipse.jetty.io.ssl.SslHandshakeListener;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class BouncycastleClientALPNProcessor implements ALPNProcessor.Client
+public class BouncyCastleClientALPNProcessor implements ALPNProcessor.Client
 {
-    private static final Logger LOG = LoggerFactory.getLogger(BouncycastleClientALPNProcessor.class);
+    private static final Logger LOG = LoggerFactory.getLogger(BouncyCastleClientALPNProcessor.class);
 
     @Override
     public void init()
     {
-        if (Security.getProvider("BCJSSE") == null)
+        /* Required to instantiate a DEFAULT SecureRandom */
+        if (Security.getProvider(BouncyCastleFipsProvider.PROVIDER_NAME) == null)
+        {
+            Security.addProvider(new BouncyCastleFipsProvider());
+            if (LOG.isDebugEnabled())
+                LOG.debug("Added BouncyCastle FIPS provider");
+        }
+        if (Security.getProvider(BouncyCastleJsseProvider.PROVIDER_NAME) == null)
         {
             Security.addProvider(new BouncyCastleJsseProvider());
             if (LOG.isDebugEnabled())
@@ -92,7 +101,7 @@ public class BouncycastleClientALPNProcessor implements ALPNProcessor.Client
             }
             catch (Throwable e)
             {
-                LOG.warn("Unable to process Bouncycastle ApplicationProtocol for {}", alpnConnection, e);
+                LOG.warn("Unable to process BouncyCastle ApplicationProtocol for {}", alpnConnection, e);
                 alpnConnection.selected(null);
             }
         }
