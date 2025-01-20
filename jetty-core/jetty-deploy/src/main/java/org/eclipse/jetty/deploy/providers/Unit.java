@@ -22,6 +22,7 @@ import java.util.stream.Collectors;
 
 import org.eclipse.jetty.deploy.App;
 import org.eclipse.jetty.util.StringUtil;
+import org.eclipse.jetty.util.resource.PathCollators;
 
 /**
  * A Unit of deployment, a basename and all the associated
@@ -46,11 +47,12 @@ public class Unit
      */
     private String envConfig;
     private App app;
-    private State state = State.UNCHANGED;
+    private State state;
 
     public Unit(String basename)
     {
         this.baseName = basename;
+        this.state = calcState();
     }
 
     public String getBaseName()
@@ -63,6 +65,23 @@ public class Unit
         return state;
     }
 
+    /**
+     * <p>
+     * Calculate the State of the overall Unit based on the States in the Paths.
+     * </p>
+     * <dl>
+     * <dt>UNCHANGED</dt>
+     * <dd>All Path states are in UNCHANGED state</dd>
+     * <dt>ADDED</dt>
+     * <dd>All Path states are in ADDED state</dd>
+     * <dt>CHANGED</dt>
+     * <dd>At least one Path state is CHANGED, or there is a variety of states</dd>
+     * <dt>REMOVED</dt>
+     * <dd>All Path states are in REMOVED state, or there are no Paths being tracked</dd>
+     * </dl>
+     *
+     * @return the state of the Unit.
+     */
     private State calcState()
     {
         if (paths.isEmpty())
@@ -78,6 +97,8 @@ public class Unit
                 {
                     if (ret == null)
                         ret = State.UNCHANGED;
+                    else if (ret != State.UNCHANGED)
+                        ret = State.CHANGED;
                 }
                 case ADDED ->
                 {
@@ -105,6 +126,22 @@ public class Unit
     public Map<Path, State> getPaths()
     {
         return paths;
+    }
+
+    /**
+     * Return list of Paths being tracked that are live (not-removed).
+     *
+     * @return the list of live paths.
+     */
+    public List<Path> getLivePaths()
+    {
+        return paths
+            .entrySet()
+            .stream()
+            .filter((e) -> e.getValue() != Unit.State.REMOVED)
+            .map(Map.Entry::getKey)
+            .sorted(PathCollators.byName(true))
+            .toList();
     }
 
     public void putPath(Path path, State state)
@@ -154,7 +191,6 @@ public class Unit
 
     public void resetStates()
     {
-        state = State.UNCHANGED;
         // Drop paths that were removed.
         List<Path> removedPaths = paths.entrySet()
             .stream().filter(e -> e.getValue() == State.REMOVED)
@@ -166,6 +202,7 @@ public class Unit
         }
         // Set all remaining path states to UNCHANGED
         paths.replaceAll((p, v) -> State.UNCHANGED);
+        state = calcState();
     }
 
     @Override
