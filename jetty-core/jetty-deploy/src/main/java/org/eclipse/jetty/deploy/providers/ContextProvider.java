@@ -654,8 +654,10 @@ public class ContextProvider extends ScanningAppProvider
     @Override
     protected Path getMainDeploymentPath(Unit unit)
     {
+        List<Path> livePaths = unit.getLivePaths();
+
         // XML always win.
-        List<Path> xmls = unit.getPaths().keySet().stream()
+        List<Path> xmls = livePaths.stream()
             .filter(FileID::isXml)
             .toList();
         if (xmls.size() == 1)
@@ -663,7 +665,7 @@ public class ContextProvider extends ScanningAppProvider
         else if (xmls.size() > 1)
             throw new IllegalStateException("More than 1 XML for deployable " + asStringList(xmls));
         // WAR files are next.
-        List<Path> wars = unit.getPaths().keySet().stream()
+        List<Path> wars = livePaths.stream()
             .filter(FileID::isWebArchive)
             .toList();
         if (wars.size() == 1)
@@ -671,7 +673,7 @@ public class ContextProvider extends ScanningAppProvider
         else if (wars.size() > 1)
             throw new IllegalStateException("More than 1 WAR for deployable " + asStringList(wars));
         // Directories next.
-        List<Path> dirs = unit.getPaths().keySet().stream()
+        List<Path> dirs = livePaths.stream()
             .filter(Files::isDirectory)
             .toList();
         if (dirs.size() == 1)
