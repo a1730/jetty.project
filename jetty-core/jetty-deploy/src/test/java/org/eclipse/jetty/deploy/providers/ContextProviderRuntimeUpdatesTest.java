@@ -17,10 +17,10 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.attribute.FileTime;
-import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import org.eclipse.jetty.deploy.AbstractCleanEnvironmentTest;
 import org.eclipse.jetty.deploy.AppProvider;
 import org.eclipse.jetty.deploy.DeploymentManager;
 import org.eclipse.jetty.deploy.test.XmlConfiguredJetty;
@@ -49,7 +49,7 @@ import static org.junit.jupiter.api.Assertions.assertNotSame;
  * deployed contexts due to incoming changes identified by the {@link ContextProvider}.
  */
 @ExtendWith(WorkDirExtension.class)
-public class ContextProviderRuntimeUpdatesTest
+public class ContextProviderRuntimeUpdatesTest extends AbstractCleanEnvironmentTest
 {
     private static final Logger LOG = LoggerFactory.getLogger(ContextProviderRuntimeUpdatesTest.class);
 
@@ -118,22 +118,6 @@ public class ContextProviderRuntimeUpdatesTest
     public void teardownEnvironment() throws Exception
     {
         jetty.stop();
-    }
-
-    /**
-     * Cleanup after any tests that modify the {@link Environment} singleton
-     */
-    @AfterEach
-    public void clearEnvironments()
-    {
-        List<String> envnames = Environment.getAll().stream()
-            .map(Environment::getName)
-            .toList();
-        for (String envname : envnames)
-        {
-            Environment.remove(envname);
-        }
-        assertEquals(0, Environment.getAll().size());
     }
 
     public void waitForDirectoryScan()

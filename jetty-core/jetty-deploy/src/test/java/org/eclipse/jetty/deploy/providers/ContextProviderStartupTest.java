@@ -20,6 +20,7 @@ import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.nio.file.StandardOpenOption;
 
+import org.eclipse.jetty.deploy.AbstractCleanEnvironmentTest;
 import org.eclipse.jetty.deploy.BarContextHandler;
 import org.eclipse.jetty.deploy.test.XmlConfiguredJetty;
 import org.eclipse.jetty.server.Deployable;
@@ -44,7 +45,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * Tests {@link ContextProvider} as it starts up for the first time.
  */
 @ExtendWith(WorkDirExtension.class)
-public class ContextProviderStartupTest
+public class ContextProviderStartupTest extends AbstractCleanEnvironmentTest
 {
     public WorkDir testdir;
     private static XmlConfiguredJetty jetty;

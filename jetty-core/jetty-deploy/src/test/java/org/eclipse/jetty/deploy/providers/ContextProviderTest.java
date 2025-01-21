@@ -17,6 +17,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
+import org.eclipse.jetty.deploy.AbstractCleanEnvironmentTest;
 import org.eclipse.jetty.toolchain.test.jupiter.WorkDir;
 import org.eclipse.jetty.toolchain.test.jupiter.WorkDirExtension;
 import org.junit.jupiter.api.Test;
@@ -27,7 +28,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 
 @ExtendWith(WorkDirExtension.class)
-public class ContextProviderTest
+public class ContextProviderTest extends AbstractCleanEnvironmentTest
 {
     public WorkDir workDir;
 

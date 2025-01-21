@@ -21,6 +21,7 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.TimeUnit;
 
+import org.eclipse.jetty.deploy.AbstractCleanEnvironmentTest;
 import org.eclipse.jetty.deploy.AppProvider;
 import org.eclipse.jetty.deploy.DeploymentManager;
 import org.eclipse.jetty.deploy.test.XmlConfiguredJetty;
@@ -47,7 +48,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * Tests {@link ContextProvider} behaviors when in Deferred Startup mode
  */
 @ExtendWith(WorkDirExtension.class)
-public class ContextProviderDeferredStartupTest
+public class ContextProviderDeferredStartupTest extends AbstractCleanEnvironmentTest
 {
     public WorkDir testdir;
     private static XmlConfiguredJetty jetty;
