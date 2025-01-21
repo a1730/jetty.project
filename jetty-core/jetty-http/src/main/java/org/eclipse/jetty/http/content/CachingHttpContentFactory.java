@@ -163,7 +163,6 @@ public class CachingHttpContentFactory implements HttpContent.Factory
                     });
                     sorted.addAll(_cache.values());
 
-                    // TODO: Can we remove the buffers from the content before evicting.
                     // Invalidate least recently used first
                     for (CachingHttpContent content : sorted)
                     {
