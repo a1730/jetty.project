@@ -23,7 +23,6 @@ import org.eclipse.jetty.server.AliasCheck;
 import org.eclipse.jetty.server.handler.ContextHandler;
 import org.eclipse.jetty.server.handler.ResourceHandler;
 import org.eclipse.jetty.util.IO;
-import org.eclipse.jetty.util.component.Container;
 import org.eclipse.jetty.util.resource.Resource;
 import org.eclipse.jetty.util.resource.ResourceFactory;
 
@@ -59,11 +58,6 @@ public class AliasCheckerTestBase
         return resourceHandler;
     }
 
-    public static Resource toResource(Container container, Path path)
-    {
-        return ResourceFactory.of(container).newResource(path);
-    }
-
     public static Resource toResource(Path path)
     {
         return ResourceFactory.root().newResource(path);
@@ -83,7 +77,8 @@ public class AliasCheckerTestBase
         {
             for (AliasCheck aliasCheck : aliasChecks)
             {
-                contextHandler.addAliasCheck(aliasCheck);
+                if (aliasCheck != null)
+                    contextHandler.addAliasCheck(aliasCheck);
             }
         }
     }
