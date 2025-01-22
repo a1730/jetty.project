@@ -48,6 +48,8 @@ public abstract class WriteFlusher
     private static final State __IDLE = new IdleState();
     private static final State __WRITING = new WritingState();
     private static final State __COMPLETING = new CompletingState();
+    private static final State __CANCEL = new State(StateType.CANCEL);
+    private static final State __CANCELLED = new State(StateType.CANCELLED);
     private final EndPoint _endPoint;
     private final AtomicReference<State> _state = new AtomicReference<>();
 
@@ -87,6 +89,9 @@ public abstract class WriteFlusher
         WRITING,
         PENDING,
         COMPLETING,
+        CANCEL,
+        CANCELLING,
+        CANCELLED,
         FAILED
     }
 
@@ -222,6 +227,17 @@ public abstract class WriteFlusher
         }
     }
 
+    private class CancellingState extends State
+    {
+        private final Callback _callback;
+
+        private CancellingState(Callback callback)
+        {
+            super(StateType.PENDING);
+            _callback = callback;
+        }
+    }
+
     public InvocationType getCallbackInvocationType()
     {
         State s = _state.get();
@@ -313,6 +329,14 @@ public abstract class WriteFlusher
 
             switch (state.getType())
             {
+                case CANCEL:
+                {
+                    CancellingState cancellingState = new CancellingState(callback);
+                    if (_state.compareAndSet(state, cancellingState))
+                        return; // Let the cancel method return the callback
+                    break;
+                }
+
                 case FAILED:
                 {
                     FailedState failed = (FailedState)state;
@@ -321,6 +345,8 @@ public abstract class WriteFlusher
                 }
 
                 case IDLE:
+                case CANCELLED:
+                case CANCELLING:
                     for (Throwable t : suppressed)
                     {
                         LOG.warn("Failed Write Cause", t);
@@ -349,7 +375,7 @@ public abstract class WriteFlusher
     /**
      * Complete a write that has not completed and that called {@link #onIncompleteFlush()} to request a call to this
      * method when a call to {@link EndPoint#flush(ByteBuffer...)} is likely to be able to progress.
-     *
+     * <p>
      * It tries to switch from PENDING to COMPLETING. If state transition fails, then it does nothing as the callback
      * should have been already failed. That's because the only way to switch from PENDING outside this method is
      * {@link #onFail(Throwable)} or {@link #onClose()}
@@ -478,6 +504,9 @@ public abstract class WriteFlusher
             switch (current.getType())
             {
                 case IDLE:
+                case CANCEL:
+                case CANCELLING:
+                case CANCELLED:
                 case FAILED:
                     if (DEBUG)
                     {
@@ -504,6 +533,46 @@ public abstract class WriteFlusher
                         LOG.debug("failed: {}", this, cause);
                     if (updateState(current, new FailedState(cause)))
                         return true;
+                    break;
+
+                default:
+                    throw new IllegalStateException();
+            }
+        }
+    }
+
+    public Callback cancel()
+    {
+        // Keep trying to handle the failure until we get to IDLE or FAILED state
+        while (true)
+        {
+            State current = _state.get();
+            switch (current.getType())
+            {
+                case IDLE:
+                case CANCELLED:
+                case FAILED:
+                    return null;
+
+                case PENDING:
+                    PendingState pending = (PendingState)current;
+                    if (updateState(current, __CANCELLED))
+                        return pending._callback;
+                    break;
+
+                case COMPLETING:
+                case WRITING:
+                    updateState(current, __CANCEL);
+                    break;
+
+                case CANCEL:
+                    Thread.onSpinWait();
+                    break;
+
+                case CANCELLING:
+                    CancellingState cancelling = (CancellingState)current;
+                    if (updateState(current, __CANCELLED))
+                        return cancelling._callback;
                     break;
 
                 default:

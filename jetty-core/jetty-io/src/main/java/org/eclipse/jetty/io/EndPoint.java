@@ -333,6 +333,11 @@ public interface EndPoint extends Closeable, Content.Sink
         }
     }
 
+    default Callback cancelWrite()
+    {
+        return null;
+    }
+
     /**
      * @return the {@link Connection} associated with this EndPoint
      * @see #setConnection(Connection)

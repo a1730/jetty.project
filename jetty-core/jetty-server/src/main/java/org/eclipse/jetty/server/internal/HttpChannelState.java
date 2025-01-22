@@ -1175,11 +1175,19 @@ public class HttpChannelState implements HttpChannel, Components
         {
             assert _request._lock.isHeldByCurrentThread();
             Callback writeCallback = _writeCallback;
-            _writeCallback = null;
             if (writeCallback == null)
                 return null;
+            _writeCallback = null;
+
+            Callback cancel = null; // TODO _request.getHttpStream().cancelSend(x);
+            Callback callback;
+            if (cancel == null)
+                callback = writeCallback;
+            else
+                callback = Callback.combine(cancel, writeCallback);
+
             _writeFailure = ExceptionUtil.combine(_writeFailure, x);
-            return () -> HttpChannelState.failed(writeCallback, x);
+            return () -> HttpChannelState.failed(callback, x);
         }
 
         public long getContentBytesWritten()

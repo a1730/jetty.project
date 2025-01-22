@@ -19,6 +19,7 @@ import java.nio.channels.WritePendingException;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeoutException;
@@ -65,6 +66,7 @@ import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.TunnelSupport;
 import org.eclipse.jetty.util.BufferUtil;
 import org.eclipse.jetty.util.Callback;
+import org.eclipse.jetty.util.ExceptionUtil;
 import org.eclipse.jetty.util.HostPort;
 import org.eclipse.jetty.util.IteratingCallback;
 import org.eclipse.jetty.util.StringUtil;
@@ -736,6 +738,33 @@ public class HttpConnection extends AbstractMetaDataConnection implements Runnab
             super(true);
         }
 
+        public Callback cancel(Throwable cause)
+        {
+            // Cancel the IteratingCallback and take the nest Callback
+            CancelSendException cancelSendException = new CancelSendException(cause);
+            abort(cancelSendException);
+            Callback sendCallback = cancelSendException.getCallback();
+
+            // If a write operation has been scheduled cancel it and fail its callback, otherwise complete ourselves
+            Callback writeCallack = getEndPoint().cancelWrite();
+            if (writeCallack != null)
+                writeCallack.failed(cancelSendException);
+            else
+                cancelSendException.complete();
+
+            // wait for the cancellation to be complete
+            cancelSendException.join();
+
+            return sendCallback;
+        }
+
+        @Override
+        protected void onAborted(Throwable cause)
+        {
+            if (cause instanceof CancelSendException cancelSend)
+                cancelSend.setCallback(resetCallback());
+        }
+
         @Override
         public InvocationType getInvocationType()
         {
@@ -907,6 +936,8 @@ public class HttpConnection extends AbstractMetaDataConnection implements Runnab
 
         private void release()
         {
+            if (_callback != null)
+                throw new IllegalStateException("callback not invoked");
             releaseHeader();
             releaseChunk();
         }
@@ -937,7 +968,8 @@ public class HttpConnection extends AbstractMetaDataConnection implements Runnab
             }
             Callback callback = resetCallback();
             release();
-            callback.succeeded();
+            if (callback != null)
+                callback.succeeded();
         }
 
         @Override
@@ -954,9 +986,56 @@ public class HttpConnection extends AbstractMetaDataConnection implements Runnab
         }
 
         @Override
+        protected void onCompleted(Throwable causeOrNull)
+        {
+            if (causeOrNull instanceof CancelSendException cancelSendException)
+                cancelSendException.complete();
+        }
+
+        @Override
         public String toString()
         {
             return String.format("%s[i=%s,cb=%s]", super.toString(), _info, _callback);
+        }
+
+        private static class CancelSendException extends IOException
+        {
+            private final CountDownLatch _complete = new CountDownLatch(1);
+            private Callback _callback;
+
+            public CancelSendException(Throwable cause)
+            {
+                super(cause);
+            }
+
+            public void complete()
+            {
+                _complete.countDown();
+            }
+
+            public void join()
+            {
+                try
+                {
+                    _complete.await();
+                }
+                catch (InterruptedException x)
+                {
+                    Throwable cause = getCause();
+                    ExceptionUtil.addSuppressedIfNotAssociated(cause, x);
+                    throw new RuntimeIOException(cause);
+                }
+            }
+
+            public void setCallback(Callback callback)
+            {
+                _callback = callback;
+            }
+
+            public Callback getCallback()
+            {
+                return _callback;
+            }
         }
     }
 
@@ -1455,6 +1534,12 @@ public class HttpConnection extends AbstractMetaDataConnection implements Runnab
 
             if (_sendCallback.reset(_request, response, content, last, callback))
                 _sendCallback.iterate();
+        }
+
+        @Override
+        public Callback cancelSend(Throwable cause)
+        {
+            return _sendCallback.cancel(cause);
         }
 
         @Override

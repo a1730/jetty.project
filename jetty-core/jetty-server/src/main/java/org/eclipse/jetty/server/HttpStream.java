@@ -82,6 +82,11 @@ public interface HttpStream extends Callback
      */
     void send(MetaData.Request request, MetaData.Response response, boolean last, ByteBuffer content, Callback callback);
 
+    default Callback cancelSend(Throwable cause)
+    {
+        return null;
+    }
+
     /**
      * <p>Pushes the given {@code resource} to the client.</p>
      *
