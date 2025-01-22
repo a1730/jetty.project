@@ -97,11 +97,28 @@ public class DeploymentUnits implements Scanner.ChangeSetListener
             String envname = getEnvironmentName(basename, environmentNames);
             if (StringUtil.isNotBlank(envname))
             {
-                // we have an environment configuration specific path entry.
-                changedBaseNames.add(envname);
-                Unit unit = units.computeIfAbsent(envname, Unit::new);
-                unit.setEnvironmentConfigName(envname);
-                unit.putPath(path, state);
+                // The file starts with a known environment name.
+                // We only care if it is a Environment Configuration file, namely an XML or Properties file.
+                if (FileID.isExtension(path, "xml", "properties"))
+                {
+                    // we have an environment configuration specific path entry.
+                    changedBaseNames.add(envname);
+                    Unit unit = units.computeIfAbsent(envname, Unit::new);
+                    unit.setEnvironmentConfigName(envname);
+                    unit.putPath(path, state);
+                }
+                else
+                {
+                    LOG.warn("Encountered Path that uses reserved Environment name prefix " +
+                        "(This is seen as a configuration for the environment) [{}]: {}", envname, path);
+                    // This is something like ee10-app.war
+                    // For now, we add it to the basename, but in the future, this will be rejected
+                    // as it prevents the use of a configuration file like ee10-app.xml next to it (which
+                    // will be seen as a XML to configure the ee10 environment, not an XML for deploying that war)
+                    changedBaseNames.add(basename);
+                    Unit unit = units.computeIfAbsent(basename, Unit::new);
+                    unit.putPath(path, state);
+                }
             }
             else
             {
