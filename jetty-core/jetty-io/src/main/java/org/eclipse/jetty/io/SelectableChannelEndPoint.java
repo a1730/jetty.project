@@ -21,6 +21,7 @@ import java.nio.channels.SelectableChannel;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 
+import org.eclipse.jetty.util.Callback;
 import org.eclipse.jetty.util.IO;
 import org.eclipse.jetty.util.thread.AutoLock;
 import org.eclipse.jetty.util.thread.Invocable;
@@ -174,16 +175,25 @@ public abstract class SelectableChannelEndPoint extends AbstractEndPoint impleme
     @Override
     protected void needsFillInterest()
     {
-        changeInterests(SelectionKey.OP_READ);
+        addInterests(SelectionKey.OP_READ);
     }
 
     @Override
     protected void onIncompleteFlush()
     {
-        changeInterests(SelectionKey.OP_WRITE);
+        addInterests(SelectionKey.OP_WRITE);
     }
 
-    private void changeInterests(int operation)
+    @Override
+    public Callback cancelWrite()
+    {
+        Callback callback = super.cancelWrite();
+        if (callback != null)
+            removeInterests(SelectionKey.OP_WRITE);
+        return callback;
+    }
+
+    private void addInterests(int operation)
     {
         // This method runs from any thread, possibly
         // concurrently with updateKey() and onSelected().
@@ -201,7 +211,31 @@ public abstract class SelectableChannelEndPoint extends AbstractEndPoint impleme
         }
 
         if (LOG.isDebugEnabled())
-            LOG.debug("changeInterests p={} {}->{} for {}", pending, oldInterestOps, newInterestOps, this);
+            LOG.debug("addInterests p={} {}->{} for {}", pending, oldInterestOps, newInterestOps, this);
+
+        if (!pending && _selector != null)
+            _selector.submit(_updateKeyAction);
+    }
+
+    private void removeInterests(int operation)
+    {
+        // This method runs from any thread, possibly
+        // concurrently with updateKey() and onSelected().
+
+        int oldInterestOps;
+        int newInterestOps;
+        boolean pending;
+        try (AutoLock l = _lock.lock())
+        {
+            pending = _updatePending;
+            oldInterestOps = _desiredInterestOps;
+            newInterestOps = oldInterestOps & ~operation;
+            if (newInterestOps != oldInterestOps)
+                _desiredInterestOps = newInterestOps;
+        }
+
+        if (LOG.isDebugEnabled())
+            LOG.debug("removeInterests p={} {}->{} for {}", pending, oldInterestOps, newInterestOps, this);
 
         if (!pending && _selector != null)
             _selector.submit(_updateKeyAction);

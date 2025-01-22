@@ -333,6 +333,13 @@ public interface EndPoint extends Closeable, Content.Sink
         }
     }
 
+    /**
+     * Cancel any {@link #write(Callback, ByteBuffer...)} operation
+     * in progress.
+     *
+     * @return The callback passed to {@link #write(Callback, ByteBuffer...)} or
+     *         {@code null}
+     */
     default Callback cancelWrite()
     {
         return null;

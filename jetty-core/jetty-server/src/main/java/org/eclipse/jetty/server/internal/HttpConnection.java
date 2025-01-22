@@ -743,19 +743,17 @@ public class HttpConnection extends AbstractMetaDataConnection implements Runnab
             // Cancel the IteratingCallback and take the nest Callback
             CancelSendException cancelSendException = new CancelSendException(cause);
             abort(cancelSendException);
-            Callback sendCallback = cancelSendException.getCallback();
 
             // If a write operation has been scheduled cancel it and fail its callback, otherwise complete ourselves
-            Callback writeCallack = getEndPoint().cancelWrite();
-            if (writeCallack != null)
-                writeCallack.failed(cancelSendException);
+            Callback writeCallback = getEndPoint().cancelWrite();
+            if (writeCallback != null)
+                writeCallback.failed(cancelSendException);
             else
                 cancelSendException.complete();
 
             // wait for the cancellation to be complete
             cancelSendException.join();
-
-            return sendCallback;
+            return cancelSendException.getCallback();
         }
 
         @Override
@@ -763,6 +761,14 @@ public class HttpConnection extends AbstractMetaDataConnection implements Runnab
         {
             if (cause instanceof CancelSendException cancelSend)
                 cancelSend.setCallback(resetCallback());
+        }
+
+        @Override
+        protected void onCompleted(Throwable causeOrNull)
+        {
+            if (causeOrNull instanceof CancelSendException cancelSendException)
+                cancelSendException.complete();
+            super.onCompleted(causeOrNull);
         }
 
         @Override
@@ -983,14 +989,6 @@ public class HttpConnection extends AbstractMetaDataConnection implements Runnab
         protected void onCompleteFailure(Throwable cause)
         {
             release();
-        }
-
-        @Override
-        protected void onCompleted(Throwable causeOrNull)
-        {
-            if (causeOrNull instanceof CancelSendException cancelSendException)
-                cancelSendException.complete();
-            super.onCompleted(causeOrNull);
         }
 
         @Override
