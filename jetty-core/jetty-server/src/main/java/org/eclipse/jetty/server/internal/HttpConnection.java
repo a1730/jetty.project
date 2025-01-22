@@ -990,6 +990,7 @@ public class HttpConnection extends AbstractMetaDataConnection implements Runnab
         {
             if (causeOrNull instanceof CancelSendException cancelSendException)
                 cancelSendException.complete();
+            super.onCompleted(causeOrNull);
         }
 
         @Override

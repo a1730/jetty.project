@@ -1179,7 +1179,7 @@ public class HttpChannelState implements HttpChannel, Components
                 return null;
             _writeCallback = null;
 
-            Callback cancel = null; // TODO _request.getHttpStream().cancelSend(x);
+            Callback cancel = _request.getHttpStream().cancelSend(x);
             Callback callback;
             if (cancel == null)
                 callback = writeCallback;

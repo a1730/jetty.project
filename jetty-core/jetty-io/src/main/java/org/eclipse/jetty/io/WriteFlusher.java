@@ -55,27 +55,35 @@ public abstract class WriteFlusher
 
     static
     {
-        // fill the state machine
+        // A write operation may either complete immediately:
+        //     IDLE-->WRITING-->IDLE
+        // Or it may not completely flush and go via the PENDING state
+        //     IDLE-->WRITING-->PENDING-->COMPLETING-->IDLE
+        // Or it may take several cycles to complete
+        //     IDLE-->WRITING-->PENDING-->COMPLETING-->PENDING-->COMPLETING-->IDLE
+        //
+        // If a failure happens while in IDLE, it is a noop since there is no operation to tell of the failure.
+        //     IDLE--(fail)-->IDLE
+        //
+        // If a cancel happens then:
+        //     PENDING -> CANCELLED
+        //     COMPLETING/WRITING -> CANCEL
+        //     CANCELLING -> CANCELLED
+        //     CANCEL -> CANCELLING
+        //
+        // From any other state than IDLE a failure will result in an FAILED state which is a terminal state, and
+        // the callback is failed with the Throwable which caused the failure.
+        //     IDLE-->WRITING--(fail)-->FAILED
+
         __stateTransitions.put(StateType.IDLE, EnumSet.of(StateType.WRITING));
-        __stateTransitions.put(StateType.WRITING, EnumSet.of(StateType.IDLE, StateType.PENDING, StateType.FAILED));
-        __stateTransitions.put(StateType.PENDING, EnumSet.of(StateType.COMPLETING, StateType.IDLE, StateType.FAILED));
-        __stateTransitions.put(StateType.COMPLETING, EnumSet.of(StateType.IDLE, StateType.PENDING, StateType.FAILED));
+        __stateTransitions.put(StateType.WRITING, EnumSet.of(StateType.IDLE, StateType.PENDING, StateType.CANCEL, StateType.FAILED));
+        __stateTransitions.put(StateType.PENDING, EnumSet.of(StateType.COMPLETING, StateType.IDLE, StateType.CANCELLED, StateType.FAILED));
+        __stateTransitions.put(StateType.COMPLETING, EnumSet.of(StateType.IDLE, StateType.PENDING, StateType.CANCEL, StateType.FAILED));
+        __stateTransitions.put(StateType.CANCEL, EnumSet.of(StateType.CANCELLING));
+        __stateTransitions.put(StateType.CANCELLING, EnumSet.of(StateType.CANCELLED));
+        __stateTransitions.put(StateType.CANCELLED, EnumSet.noneOf(StateType.class));
         __stateTransitions.put(StateType.FAILED, EnumSet.noneOf(StateType.class));
     }
-
-    // A write operation may either complete immediately:
-    //     IDLE-->WRITING-->IDLE
-    // Or it may not completely flush and go via the PENDING state
-    //     IDLE-->WRITING-->PENDING-->COMPLETING-->IDLE
-    // Or it may take several cycles to complete
-    //     IDLE-->WRITING-->PENDING-->COMPLETING-->PENDING-->COMPLETING-->IDLE
-    //
-    // If a failure happens while in IDLE, it is a noop since there is no operation to tell of the failure.
-    //     IDLE--(fail)-->IDLE
-    //
-    // From any other state than IDLE a failure will result in an FAILED state which is a terminal state, and
-    // the callback is failed with the Throwable which caused the failure.
-    //     IDLE-->WRITING--(fail)-->FAILED
 
     protected WriteFlusher(EndPoint endPoint)
     {
@@ -106,7 +114,7 @@ public abstract class WriteFlusher
     private boolean updateState(State previous, State next)
     {
         if (!isTransitionAllowed(previous, next))
-            throw new IllegalStateException();
+            throw new IllegalArgumentException("Bad transition %s -> %s".formatted(previous, next));
 
         boolean updated = _state.compareAndSet(previous, next);
         if (DEBUG)
