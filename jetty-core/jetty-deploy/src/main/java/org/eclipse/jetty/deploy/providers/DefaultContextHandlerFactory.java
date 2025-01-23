@@ -170,7 +170,7 @@ public class DefaultContextHandlerFactory
             // via a different means.  This is especially important for a deployable App
             // that is only a <name>.war file (no XML).  The eventual WebInfConfiguration
             // will use this attribute.
-            app.getAttributes().setAttribute(Deployable.WAR, mainPath.toString());
+            deployAttributes.setAttribute(Deployable.WAR, mainPath.toString());
 
             // Initialize any deployable
             if (context instanceof Deployable deployable)
