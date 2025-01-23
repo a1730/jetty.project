@@ -47,8 +47,8 @@ public class OSGiApp implements App
 
     private final String _bundleName;
     private final Path _bundlePath;
+    private final Properties _properties = new Properties();
     protected Bundle _bundle;
-    protected Properties _properties;
     protected ServiceRegistration _registration;
     protected ContextHandler _contextHandler;
     protected String _pathToResourceBase;
