@@ -3,11 +3,11 @@
 <!-- =============================================================== -->
 <!-- Configure the "core" environment deployment defaults            -->
 <!-- =============================================================== -->
-<Configure id="contextProvider" class="org.eclipse.jetty.deploy.providers.ContextProvider">
+<Configure id="defaultProvider" class="org.eclipse.jetty.deploy.providers.DefaultProvider">
   <Call name="configureEnvironment">
     <Arg>core</Arg>
     <Set name="contextHandlerClass">
-      <Property name="contextHandlerClass" default="org.eclipse.jetty.server.handler.ResourceHandler$ResourceContext" />
+      <Property name="contextHandlerClass" default="org.eclipse.jetty.server.handler.CoreWebAppContext" />
     </Set>
   </Call>
 </Configure>

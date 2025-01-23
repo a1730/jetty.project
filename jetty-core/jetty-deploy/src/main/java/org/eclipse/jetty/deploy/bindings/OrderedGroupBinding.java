@@ -13,10 +13,12 @@
 
 package org.eclipse.jetty.deploy.bindings;
 
+import java.util.Arrays;
 import java.util.LinkedList;
 
 import org.eclipse.jetty.deploy.App;
 import org.eclipse.jetty.deploy.AppLifeCycle;
+import org.eclipse.jetty.deploy.DeploymentManager;
 import org.eclipse.jetty.deploy.graph.Node;
 
 /**
@@ -51,10 +53,7 @@ public class OrderedGroupBinding implements AppLifeCycle.Binding
             _orderedBindings = new LinkedList<AppLifeCycle.Binding>();
         }
 
-        for (AppLifeCycle.Binding binding : bindings)
-        {
-            _orderedBindings.add(binding);
-        }
+        _orderedBindings.addAll(Arrays.asList(bindings));
     }
 
     @Override
@@ -64,11 +63,11 @@ public class OrderedGroupBinding implements AppLifeCycle.Binding
     }
 
     @Override
-    public void processBinding(Node node, App app) throws Exception
+    public void processBinding(DeploymentManager deploymentManager, Node node, App app) throws Exception
     {
         for (AppLifeCycle.Binding binding : _orderedBindings)
         {
-            binding.processBinding(node, app);
+            binding.processBinding(deploymentManager, node, app);
         }
     }
 }

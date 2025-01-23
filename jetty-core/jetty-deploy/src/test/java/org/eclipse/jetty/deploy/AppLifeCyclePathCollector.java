@@ -45,7 +45,7 @@ public class AppLifeCyclePathCollector implements AppLifeCycle.Binding
     }
 
     @Override
-    public void processBinding(Node node, App app) throws Exception
+    public void processBinding(DeploymentManager deploymentManager, Node node, App app) throws Exception
     {
         actualOrder.add(node);
     }

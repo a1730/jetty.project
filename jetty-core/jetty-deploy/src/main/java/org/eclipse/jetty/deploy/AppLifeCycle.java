@@ -39,7 +39,7 @@ public class AppLifeCycle extends Graph
 
     private static final String ALL_NODES = "*";
 
-    public static interface Binding
+    public interface Binding
     {
         /**
          * Get a list of targets that this implementation should bind to.
@@ -55,7 +55,7 @@ public class AppLifeCycle extends Graph
          * @param app the app being processed
          * @throws Exception if any problem severe enough to halt the AppLifeCycle processing
          */
-        void processBinding(Node node, App app) throws Exception;
+        void processBinding(DeploymentManager deploymentManager, Node node, App app) throws Exception;
     }
 
     // Well known existing lifecycle Nodes
@@ -180,7 +180,7 @@ public class AppLifeCycle extends Graph
         {
             if (LOG.isDebugEnabled())
                 LOG.debug("Calling {} for {}", binding.getClass().getName(), app);
-            binding.processBinding(node, app);
+            binding.processBinding(deploymentManager, node, app);
         }
     }
 }

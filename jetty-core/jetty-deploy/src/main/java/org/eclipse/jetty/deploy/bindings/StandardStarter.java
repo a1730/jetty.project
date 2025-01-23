@@ -15,6 +15,7 @@ package org.eclipse.jetty.deploy.bindings;
 
 import org.eclipse.jetty.deploy.App;
 import org.eclipse.jetty.deploy.AppLifeCycle;
+import org.eclipse.jetty.deploy.DeploymentManager;
 import org.eclipse.jetty.deploy.graph.Node;
 import org.eclipse.jetty.server.handler.ContextHandler;
 import org.eclipse.jetty.server.handler.ContextHandlerCollection;
@@ -28,9 +29,9 @@ public class StandardStarter implements AppLifeCycle.Binding
     }
 
     @Override
-    public void processBinding(Node node, App app) throws Exception
+    public void processBinding(DeploymentManager deploymentManager, Node node, App app) throws Exception
     {
-        ContextHandlerCollection contexts = app.getDeploymentManager().getContexts();
+        ContextHandlerCollection contexts = deploymentManager.getContexts();
 
         ContextHandler handler = app.getContextHandler();
 

@@ -26,7 +26,6 @@ public class MockAppProvider extends AbstractLifeCycle implements AppProvider
     private DeploymentManager deployMan;
     private Path webappsDir;
 
-    @Override
     public String getEnvironmentName()
     {
         return Environment.ensure("mock").getName();
@@ -46,41 +45,41 @@ public class MockAppProvider extends AbstractLifeCycle implements AppProvider
 
     public App createWebapp(String name)
     {
-        App app = new App(deployMan, this, Path.of("./mock-" + name));
+        String basename = FileID.getBasename(name);
+        MockApp app = new MockApp(basename);
+        app.setContextHandler(createContextHandler(app));
         this.deployMan.addApp(app);
         return app;
     }
 
-    @Override
     public ContextHandler createContextHandler(App app)
     {
         ContextHandler contextHandler = new ContextHandler();
 
-        String name = app.getPath().toString();
-        name = name.substring(name.lastIndexOf("-")  + 1);
-        Path war = webappsDir.resolve(name);
+        String name = app.getName();
+        Path war = webappsDir.resolve(name + ".war");
 
-        String path = war.toString();
+        String contextPath = war.toString();
 
         if (FileID.isWebArchive(war))
         {
             // Context Path is the same as the archive.
-            path = path.substring(0, path.length() - 4);
+            contextPath = FileID.getBasename(war);
         }
 
-        // special case of archive (or dir) named "root" is / context
-        if (path.equalsIgnoreCase("root") || path.equalsIgnoreCase("root/"))
-            path = "/";
+        // special case of archive named "root" is / context-path
+        if (contextPath.equalsIgnoreCase("root"))
+            contextPath = "/";
 
         // Ensure "/" is Prepended to all context paths.
-        if (path.charAt(0) != '/')
-            path = "/" + path;
+        if (contextPath.charAt(0) != '/')
+            contextPath = "/" + contextPath;
 
         // Ensure "/" is Not Trailing in context paths.
-        if (path.endsWith("/") && path.length() > 0)
-            path = path.substring(0, path.length() - 1);
+        if (contextPath.endsWith("/"))
+            contextPath = contextPath.substring(0, contextPath.length() - 1);
 
-        contextHandler.setContextPath(path);
+        contextHandler.setContextPath(contextPath);
 
         return contextHandler;
     }

@@ -15,7 +15,6 @@ package org.eclipse.jetty.deploy;
 
 import java.io.IOException;
 
-import org.eclipse.jetty.server.handler.ContextHandler;
 import org.eclipse.jetty.util.component.LifeCycle;
 
 /**
@@ -39,15 +38,5 @@ public interface AppProvider extends LifeCycle
      * @throws IOException if unable to create context
      * @throws Exception if unable to create context
      */
-    ContextHandler createContextHandler(App app) throws Exception;
-
-    /**
-     * @return The name of the {@link org.eclipse.jetty.util.component.Environment} this provider is for.
-     * @deprecated not used by all AppProviders, no generic replacement provided.
-     */
-    @Deprecated(forRemoval = true, since = "12.1.0")
-    default String getEnvironmentName()
-    {
-        return "";
-    }
+    // ContextHandler createContextHandler(App app) throws Exception;
 }

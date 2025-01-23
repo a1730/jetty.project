@@ -15,6 +15,7 @@ package org.eclipse.jetty.deploy.bindings;
 
 import org.eclipse.jetty.deploy.App;
 import org.eclipse.jetty.deploy.AppLifeCycle;
+import org.eclipse.jetty.deploy.DeploymentManager;
 import org.eclipse.jetty.deploy.graph.Node;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -42,7 +43,7 @@ public class DebugBinding implements AppLifeCycle.Binding
     }
 
     @Override
-    public void processBinding(Node node, App app) throws Exception
+    public void processBinding(DeploymentManager deploymentManager, Node node, App app) throws Exception
     {
         LOG.info("processBinding {} {}", node, app.getContextHandler());
     }

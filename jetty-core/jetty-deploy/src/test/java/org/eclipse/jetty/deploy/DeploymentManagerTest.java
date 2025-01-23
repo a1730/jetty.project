@@ -19,20 +19,17 @@ import java.util.List;
 import java.util.Set;
 
 import org.eclipse.jetty.deploy.test.XmlConfiguredJetty;
-import org.eclipse.jetty.server.Deployable;
 import org.eclipse.jetty.server.handler.ContextHandlerCollection;
+import org.eclipse.jetty.toolchain.test.MavenPaths;
 import org.eclipse.jetty.toolchain.test.jupiter.WorkDir;
 import org.eclipse.jetty.toolchain.test.jupiter.WorkDirExtension;
 import org.eclipse.jetty.util.component.Environment;
 import org.eclipse.jetty.util.component.LifeCycle;
-import org.hamcrest.Matchers;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.contains;
-import static org.hamcrest.Matchers.endsWith;
 import static org.hamcrest.Matchers.is;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -84,9 +81,9 @@ public class DeploymentManagerTest
             // Test app get
             App app = apps.stream().findFirst().orElse(null);
             assertNotNull(app);
-            App actual = depman.getApp(app.getPath());
+            App actual = depman.getApp(app.getName());
             assertNotNull(actual, "Should have gotten app (by id)");
-            assertThat(actual.getPath().toString(), endsWith("mock-foo-webapp-1.war"));
+            assertThat(actual.getName(), is("foo-webapp-1"));
         }
         finally
         {
@@ -111,76 +108,6 @@ public class DeploymentManagerTest
     }
 
     @Test
-    public void testDefaultEnvironment()
-    {
-        DeploymentManager depman = new DeploymentManager();
-        assertThat(depman.getDefaultEnvironmentName(), Matchers.nullValue());
-
-        Environment.ensure("ee7");
-        depman.addAppProvider(new MockAppProvider()
-        {
-            @Override
-            public String getEnvironmentName()
-            {
-                return "ee7";
-            }
-        });
-        assertThat(depman.getDefaultEnvironmentName(), is("ee7"));
-
-        Environment.ensure("ee12");
-        depman.addAppProvider(new MockAppProvider()
-        {
-            @Override
-            public String getEnvironmentName()
-            {
-                return "ee12";
-            }
-        });
-        assertThat(depman.getDefaultEnvironmentName(), is("ee12"));
-
-        Environment.ensure("ee11");
-        depman.addAppProvider(new MockAppProvider()
-        {
-            @Override
-            public String getEnvironmentName()
-            {
-                return "ee11";
-            }
-        });
-        assertThat(depman.getDefaultEnvironmentName(), is("ee12"));
-
-        Environment.ensure("somethingElse");
-        depman.addAppProvider(new MockAppProvider()
-        {
-            @Override
-            public String getEnvironmentName()
-            {
-                return "somethingElse";
-            }
-        });
-        assertThat(depman.getDefaultEnvironmentName(), is("ee12"));
-
-        Environment.ensure("other");
-        depman.addAppProvider(new MockAppProvider()
-        {
-            @Override
-            public String getEnvironmentName()
-            {
-                return "other";
-            }
-        });
-
-        assertThat(depman.getAppProviders().stream().map(AppProvider::getEnvironmentName).sorted(Deployable.ENVIRONMENT_COMPARATOR).toList(),
-            contains(
-                "other",
-                "somethingElse",
-                "ee7",
-                "ee11",
-                "ee12"
-                ));
-    }
-
-    @Test
     public void testXmlConfigured(WorkDir workDir) throws Exception
     {
         Path testdir = workDir.getEmptyPathDir();
@@ -188,9 +115,9 @@ public class DeploymentManagerTest
         try
         {
             jetty = new XmlConfiguredJetty(testdir);
-            jetty.addConfiguration("jetty.xml");
-            jetty.addConfiguration("jetty-http.xml");
-            jetty.addConfiguration("jetty-core-deploy-custom.xml");
+            jetty.addConfiguration(MavenPaths.findTestResourceFile("jetty.xml"));
+            jetty.addConfiguration(MavenPaths.findTestResourceFile("jetty-http.xml"));
+            jetty.addConfiguration(MavenPaths.findTestResourceFile("jetty-core-deploy-custom.xml"));
 
             // Should not throw an Exception
             jetty.load();

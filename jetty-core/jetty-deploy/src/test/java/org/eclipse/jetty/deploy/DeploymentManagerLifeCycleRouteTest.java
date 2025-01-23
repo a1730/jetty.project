@@ -42,8 +42,8 @@ public class DeploymentManagerLifeCycleRouteTest
         depman.start();
 
         // Trigger new App
-        mockProvider.createWebapp("foo-webapp-1.war");
-        App app = depman.getApp("mock-foo-webapp-1.war");
+        mockProvider.createWebapp("foo-webapp-1");
+        App app = depman.getApp("foo-webapp-1");
 
         // Request Deploy of App
         depman.requestAppGoal(app, "deployed");
@@ -78,7 +78,7 @@ public class DeploymentManagerLifeCycleRouteTest
         // Perform no goal request.
 
         // Setup Expectations.
-        List<String> expected = new ArrayList<String>();
+        List<String> expected = new ArrayList<>();
 
         pathtracker.assertExpected("Test StateTransition / New only", expected);
     }
@@ -103,8 +103,8 @@ public class DeploymentManagerLifeCycleRouteTest
         depman.start();
 
         // Trigger new App
-        App foo = mockProvider.createWebapp("foo-webapp-1.war");
-        App app = depman.getApp(foo.getPath());
+        App foo = mockProvider.createWebapp("foo-webapp-1");
+        App app = depman.getApp(foo.getName());
 
         // Request Deploy of App
         depman.requestAppGoal(app, "deployed");
@@ -114,12 +114,12 @@ public class DeploymentManagerLifeCycleRouteTest
 
         MBeanServerConnection mbsConnection = jmxConnection.getConnection();
         ObjectName dmObjName = new ObjectName("org.eclipse.jetty.deploy:type=deploymentmanager,id=0");
-        String[] params = new String[]{"mock-foo-webapp-1.war", "undeployed"};
+        String[] params = new String[]{"foo-webapp-1", "undeployed"};
         String[] signature = new String[]{"java.lang.String", "java.lang.String"};
         mbsConnection.invoke(dmObjName, "requestAppGoal", params, signature);
 
         // Setup Expectations.
-        List<String> expected = new ArrayList<String>();
+        List<String> expected = new ArrayList<>();
         // SHOULD NOT SEE THIS NODE VISITED - expected.add("undeployed");
         expected.add("deploying");
         expected.add("deployed");

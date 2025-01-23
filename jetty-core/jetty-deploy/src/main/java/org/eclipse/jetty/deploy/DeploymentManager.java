@@ -13,14 +13,11 @@
 
 package org.eclipse.jetty.deploy;
 
-import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
@@ -32,8 +29,6 @@ import org.eclipse.jetty.deploy.bindings.StandardUndeployer;
 import org.eclipse.jetty.deploy.graph.Edge;
 import org.eclipse.jetty.deploy.graph.Node;
 import org.eclipse.jetty.deploy.graph.Route;
-import org.eclipse.jetty.deploy.providers.ContextProvider;
-import org.eclipse.jetty.server.Deployable;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.handler.ContextHandlerCollection;
 import org.eclipse.jetty.util.ExceptionUtil;
@@ -42,7 +37,6 @@ import org.eclipse.jetty.util.annotation.ManagedObject;
 import org.eclipse.jetty.util.annotation.ManagedOperation;
 import org.eclipse.jetty.util.annotation.Name;
 import org.eclipse.jetty.util.component.ContainerLifeCycle;
-import org.eclipse.jetty.util.component.Environment;
 import org.eclipse.jetty.util.thread.AutoLock;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -72,13 +66,6 @@ public class DeploymentManager extends ContainerLifeCycle
     public class AppEntry
     {
         /**
-         * Version of the app.
-         *
-         * Note: Auto-increments on each {@link DeploymentManager#addApp(App)}
-         */
-        private int version;
-
-        /**
          * The app being tracked.
          */
         private App app;
@@ -87,11 +74,6 @@ public class DeploymentManager extends ContainerLifeCycle
          * The lifecycle node location of this App
          */
         private Node lifecyleNode;
-
-        /**
-         * Tracking the various AppState timestamps (in system milliseconds)
-         */
-        private Map<Node, Long> stateTimestamps = new HashMap<Node, Long>();
 
         public App getApp()
         {
@@ -103,20 +85,9 @@ public class DeploymentManager extends ContainerLifeCycle
             return lifecyleNode;
         }
 
-        public Map<Node, Long> getStateTimestamps()
-        {
-            return stateTimestamps;
-        }
-
-        public int getVersion()
-        {
-            return version;
-        }
-
         void setLifeCycleNode(Node node)
         {
             this.lifecyleNode = node;
-            this.stateTimestamps.put(node, System.currentTimeMillis());
         }
     }
 
@@ -128,21 +99,6 @@ public class DeploymentManager extends ContainerLifeCycle
     private ContextHandlerCollection _contexts;
     private boolean _useStandardBindings = true;
     private String _defaultLifeCycleGoal = AppLifeCycle.STARTED;
-
-    /**
-     * Get the default {@link Environment} name for deployed applications, which is
-     * the maximal name when using the {@link Deployable#ENVIRONMENT_COMPARATOR}.
-     * @return The default {@link Environment} name or null.
-     * @deprecated not used, replacement at {@link ContextProvider#getDefaultEnvironmentName()}
-     */
-    @Deprecated(since = "12.1.0", forRemoval = true)
-    public String getDefaultEnvironmentName()
-    {
-        return _providers.stream()
-            .map(AppProvider::getEnvironmentName)
-            .max(Deployable.ENVIRONMENT_COMPARATOR)
-            .orElse(null);
-    }
 
     /**
      * Receive an app for processing.
@@ -186,16 +142,6 @@ public class DeploymentManager extends ContainerLifeCycle
             if (_providers.add(provider))
                 addBean(provider, true);
         }
-    }
-
-    /**
-     * @deprecated No replacement. AppProvider interface no longer has getEnvironmentName.
-     */
-    @Deprecated(since = "12.1.0", forRemoval = true)
-    public boolean hasAppProviderFor(String environmentName)
-    {
-        return environmentName != null && getAppProviders().stream()
-            .map(AppProvider::getEnvironmentName).anyMatch(environmentName::equalsIgnoreCase);
     }
 
     public Collection<AppProvider> getAppProviders()
@@ -297,47 +243,24 @@ public class DeploymentManager extends ContainerLifeCycle
         super.doStop();
     }
 
-    private AppEntry findApp(String appId)
+    private AppEntry findAppEntry(String appId)
     {
         if (appId == null)
             return null;
 
         for (AppEntry entry : _apps)
         {
-            Path path = entry.app.getPath();
-            if (appId.equals(path.getName(path.getNameCount() - 1).toString()))
+            String name = entry.app.getName();
+            if (appId.equals(name))
                 return entry;
-        }
-        return null;
-    }
-
-    private AppEntry findApp(Path path)
-    {
-        if (path == null)
-            return null;
-
-        for (AppEntry entry : _apps)
-        {
-            if (path.equals(entry.app.getPath()))
-            {
-                return entry;
-            }
         }
         return null;
     }
 
     public App getApp(String appId)
     {
-        AppEntry entry = findApp(appId);
+        AppEntry entry = findAppEntry(appId);
         return entry == null ? null : entry.getApp();
-    }
-
-    public App getApp(Path path)
-    {
-        AppEntry entry = findApp(path);
-        if (entry == null)
-            return null;
-        return entry.app;
     }
 
     public Collection<AppEntry> getAppEntries()
@@ -379,37 +302,6 @@ public class DeploymentManager extends ContainerLifeCycle
     public Collection<App> getApps(String nodeName)
     {
         return getApps(_lifecycle.getNodeByName(nodeName));
-    }
-
-    public List<App> getAppsWithSameContext(App app)
-    {
-        List<App> ret = new ArrayList<App>();
-        if (app == null)
-        {
-            return ret;
-        }
-
-        String contextId = app.getContextPath();
-        if (contextId == null)
-        {
-            // No context? Likely not deployed or started yet.
-            return ret;
-        }
-
-        for (AppEntry entry : _apps)
-        {
-            if (entry.app.equals(app))
-            {
-                // Its the input app. skip it.
-                continue;
-            }
-
-            if (contextId.equals(entry.app.getContextPath()))
-            {
-                ret.add(entry.app);
-            }
-        }
-        return ret;
     }
 
     @ManagedAttribute("Deployed Contexts")
@@ -482,7 +374,7 @@ public class DeploymentManager extends ContainerLifeCycle
      */
     public void requestAppGoal(App app, String nodeName)
     {
-        AppEntry appentry = findApp(app.getPath());
+        AppEntry appentry = findAppEntry(app.getName());
         if (appentry == null)
         {
             throw new IllegalStateException("App not being tracked by Deployment Manager: " + app);
@@ -573,7 +465,7 @@ public class DeploymentManager extends ContainerLifeCycle
     @ManagedOperation(value = "request the app to be moved to the specified lifecycle node", impact = "ACTION")
     public void requestAppGoal(@Name("appId") String appId, @Name("nodeName") String nodeName)
     {
-        AppEntry appentry = findApp(appId);
+        AppEntry appentry = findAppEntry(appId);
         if (appentry == null)
         {
             throw new IllegalStateException("App not being tracked by Deployment Manager: " + appId);

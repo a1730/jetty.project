@@ -45,13 +45,13 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
 
 /**
- * Similar in scope to {@link ContextProviderStartupTest}, except is concerned with the modification of existing
- * deployed contexts due to incoming changes identified by the {@link ContextProvider}.
+ * Similar in scope to {@link DefaultProviderStartupTest}, except is concerned with the modification of existing
+ * deployed contexts due to incoming changes identified by the {@link DefaultProvider}.
  */
 @ExtendWith(WorkDirExtension.class)
-public class ContextProviderRuntimeUpdatesTest extends AbstractCleanEnvironmentTest
+public class DefaultProviderRuntimeUpdatesTest extends AbstractCleanEnvironmentTest
 {
-    private static final Logger LOG = LoggerFactory.getLogger(ContextProviderRuntimeUpdatesTest.class);
+    private static final Logger LOG = LoggerFactory.getLogger(DefaultProviderRuntimeUpdatesTest.class);
 
     private static XmlConfiguredJetty jetty;
     private final AtomicInteger _scans = new AtomicInteger();
@@ -81,11 +81,11 @@ public class ContextProviderRuntimeUpdatesTest extends AbstractCleanEnvironmentT
 
     public void startJetty() throws Exception
     {
-        jetty.addConfiguration("jetty.xml");
-        jetty.addConfiguration("jetty-http.xml");
+        jetty.addConfiguration(MavenPaths.findTestResourceFile("jetty.xml"));
+        jetty.addConfiguration(MavenPaths.findTestResourceFile("jetty-http.xml"));
         jetty.addConfiguration(MavenPaths.projectBase().resolve("src/main/config/etc/jetty-deployment-manager.xml"));
         jetty.addConfiguration(MavenPaths.projectBase().resolve("src/main/config/etc/jetty-deploy.xml"));
-        jetty.addConfiguration("jetty-core-deploy-custom.xml");
+        jetty.addConfiguration(MavenPaths.findTestResourceFile("jetty-core-deploy-custom.xml"));
 
         // Should not throw an Exception
         jetty.load();
@@ -97,7 +97,7 @@ public class ContextProviderRuntimeUpdatesTest extends AbstractCleanEnvironmentT
         DeploymentManager dm = jetty.getServer().getBean(DeploymentManager.class);
         for (AppProvider provider : dm.getAppProviders())
         {
-            if (provider instanceof ScanningAppProvider scanningAppProvider)
+            if (provider instanceof DefaultProvider scanningAppProvider)
             {
                 _providerCount++;
                 scanningAppProvider.addScannerListener(new Scanner.ScanCycleListener()
@@ -170,6 +170,9 @@ public class ContextProviderRuntimeUpdatesTest extends AbstractCleanEnvironmentT
         Path testdir = workDir.getEmptyPathDir();
         createJettyBase(testdir);
 
+        Path environments = jetty.getJettyBasePath().resolve("environments");
+        FS.ensureDirExists(environments);
+
         Environment.ensure("core").setAttribute("testname", "Initial");
 
         // Setup initial webapp, with XML
@@ -187,7 +190,7 @@ public class ContextProviderRuntimeUpdatesTest extends AbstractCleanEnvironmentT
         assertThat("displayname", contextHandler.getDisplayName(), is("Simple Initial"));
 
         // Add environment configuration
-        Path coreProp = jetty.getJettyBasePath().resolve("webapps/core.properties");
+        Path coreProp = environments.resolve("core.properties");
         Files.writeString(coreProp, "testname=New EnvConfig");
 
         waitForDirectoryScan();

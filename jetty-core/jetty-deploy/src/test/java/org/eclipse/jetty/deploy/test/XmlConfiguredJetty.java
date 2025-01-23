@@ -17,7 +17,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.InetAddress;
-import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URL;
 import java.net.URLConnection;
@@ -139,11 +138,6 @@ public class XmlConfiguredJetty
     public void addConfiguration(Path xmlConfigFile)
     {
         addConfiguration(ResourceFactory.root().newResource(xmlConfigFile));
-    }
-
-    public void addConfiguration(String testConfigName) throws MalformedURLException
-    {
-        addConfiguration(MavenPaths.findTestResourceFile(testConfigName));
     }
 
     public void addConfiguration(Resource xmlConfig)

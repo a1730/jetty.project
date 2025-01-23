@@ -3,7 +3,7 @@
 <!-- =============================================================== -->
 <!-- Configure the "ee10" environment deployment defaults            -->
 <!-- =============================================================== -->
-<Configure id="contextProvider" class="org.eclipse.jetty.deploy.providers.ContextProvider">
+<Configure id="defaultProvider" class="org.eclipse.jetty.deploy.providers.DefaultProvider">
   <Call name="configureEnvironment">
     <Arg>ee10</Arg>
     <Set name="contextHandlerClass">

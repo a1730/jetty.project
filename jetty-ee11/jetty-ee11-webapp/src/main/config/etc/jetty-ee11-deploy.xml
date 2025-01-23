@@ -3,7 +3,7 @@
 <!-- =============================================================== -->
 <!-- Configure the "ee11" environment deployment defaults            -->
 <!-- =============================================================== -->
-<Configure id="contextProvider" class="org.eclipse.jetty.deploy.providers.ContextProvider">
+<Configure id="defaultProvider" class="org.eclipse.jetty.deploy.providers.DefaultProvider">
   <Call name="configureEnvironment">
     <Arg>ee11</Arg>
     <Set name="contextHandlerClass">

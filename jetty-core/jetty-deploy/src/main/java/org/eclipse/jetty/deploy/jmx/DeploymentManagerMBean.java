@@ -79,12 +79,12 @@ public class DeploymentManagerMBean extends ObjectMBean
 
     private String toRef(App app)
     {
-        return String.format("contextPath=%s,path=%s,appProvider=%s", app.getContextPath(), app.getPath(), app.getAppProvider().getClass().getName());
+        return String.format("%s,name=%s,%s", app.getClass().getSimpleName(), app.getName(), app.getContextHandler());
     }
 
     public Collection<ContextHandler> getContexts() throws Exception
     {
-        List<ContextHandler> apps = new ArrayList<ContextHandler>();
+        List<ContextHandler> apps = new ArrayList<>();
         for (App app : _manager.getApps())
         {
             apps.add(app.getContextHandler());

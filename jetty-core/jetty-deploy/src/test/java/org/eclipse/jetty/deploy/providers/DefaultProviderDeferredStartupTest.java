@@ -48,7 +48,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * Tests {@link ContextProvider} behaviors when in Deferred Startup mode
  */
 @ExtendWith(WorkDirExtension.class)
-public class ContextProviderDeferredStartupTest extends AbstractCleanEnvironmentTest
+public class DefaultProviderDeferredStartupTest extends AbstractCleanEnvironmentTest
 {
     public WorkDir testdir;
     private static XmlConfiguredJetty jetty;
@@ -66,11 +66,11 @@ public class ContextProviderDeferredStartupTest extends AbstractCleanEnvironment
 
         // Set jetty up on the real base
         jetty = new XmlConfiguredJetty(realBase);
-        jetty.addConfiguration("jetty.xml");
-        jetty.addConfiguration("jetty-http.xml");
+        jetty.addConfiguration(MavenPaths.findTestResourceFile("jetty.xml"));
+        jetty.addConfiguration(MavenPaths.findTestResourceFile("jetty-http.xml"));
         jetty.addConfiguration(MavenPaths.projectBase().resolve("src/main/config/etc/jetty-deployment-manager.xml"));
         jetty.addConfiguration(MavenPaths.projectBase().resolve("src/main/config/etc/jetty-deploy.xml"));
-        jetty.addConfiguration("jetty-core-deploy-custom.xml");
+        jetty.addConfiguration(MavenPaths.findTestResourceFile("jetty-core-deploy-custom.xml"));
 
         // Put a context into the base
         jetty.copyWebapp("bar-core-context.xml", "bar.xml");
@@ -99,7 +99,7 @@ public class ContextProviderDeferredStartupTest extends AbstractCleanEnvironment
                     {
                         eventQueue.add("Server started");
                     }
-                    if (event instanceof ScanningAppProvider)
+                    if (event instanceof DefaultProvider)
                     {
                         eventQueue.add("ScanningAppProvider started");
                     }
@@ -112,13 +112,13 @@ public class ContextProviderDeferredStartupTest extends AbstractCleanEnvironment
 
             server.addEventListener(eventCaptureListener);
 
-            ScanningAppProvider scanningAppProvider = null;
+            DefaultProvider scanningAppProvider = null;
             DeploymentManager deploymentManager = server.getBean(DeploymentManager.class);
             for (AppProvider appProvider : deploymentManager.getAppProviders())
             {
-                if (appProvider instanceof ScanningAppProvider)
+                if (appProvider instanceof DefaultProvider)
                 {
-                    scanningAppProvider = (ScanningAppProvider)appProvider;
+                    scanningAppProvider = (DefaultProvider)appProvider;
                 }
             }
             assertNotNull(scanningAppProvider, "Should have found ScanningAppProvider");
