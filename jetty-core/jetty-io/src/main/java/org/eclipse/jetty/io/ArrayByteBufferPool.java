@@ -729,7 +729,7 @@ public class ArrayByteBufferPool implements ByteBufferPool, Dumpable
     {
         public Quadratic()
         {
-            this(4096, 65536, Integer.MAX_VALUE);
+            this(-1, -1, Integer.MAX_VALUE);
         }
 
         public Quadratic(int minCapacity, int maxCapacity, int maxBucketSize)
@@ -740,14 +740,38 @@ public class ArrayByteBufferPool implements ByteBufferPool, Dumpable
         public Quadratic(int minCapacity, int maxCapacity, int maxBucketSize, long maxHeapMemory, long maxDirectMemory)
         {
             super(minCapacity,
-                minCapacity <= 0 ? 1 : minCapacity,
-                maxCapacity,
+                computeMinCapacity(minCapacity),
+                computeMaxCapacity(maxCapacity),
                 maxBucketSize,
                 maxHeapMemory,
                 maxDirectMemory,
-                c -> 32 - Integer.numberOfLeadingZeros(c - 1) - Integer.numberOfTrailingZeros(Integer.highestOneBit(TypeUtil.ceilToNextPowerOfTwo(minCapacity))),
-                i -> 1 << i + Integer.numberOfTrailingZeros(Integer.highestOneBit(TypeUtil.ceilToNextPowerOfTwo(minCapacity)))
+                // The bucket indices are the powers of 2, but those powers up to minCapacity are skipped so they must be
+                // substracted when computing the index and added when computing the capacity; so if minCapacity is 1024, any
+                // number from 0 to 1024 must return index 0, and index 0 must return capacity 1024.
+                c -> Integer.SIZE - Integer.numberOfLeadingZeros(c - 1) - powerOfTwo(computeMinCapacity(minCapacity)),
+                i -> 1 << i + powerOfTwo(computeMinCapacity(minCapacity))
             );
+        }
+
+        private static int computeMinCapacity(int minCapacity)
+        {
+            return minCapacity <= 0 ? 1024 : minCapacity;
+        }
+
+        private static int computeMaxCapacity(int maxCapacity)
+        {
+            return maxCapacity <= 0 ? 65536 : maxCapacity;
+        }
+
+        /**
+         * Computes the power of two of the given number, ceiled to the next power of two.
+         * If the given number is 800, it is ceiled to 1024 which is the closest power of 2 greater than or equal to 800.         *
+         * Then 1024 is 10_000_000_000 in binary, i.e.: 1 followed by 10 zeros, and it's also 2 to the power of 10.
+         * So for the numbers between 513 and 1024 the returned value is 10.
+         */
+        private static int powerOfTwo(int val)
+        {
+            return Integer.numberOfTrailingZeros(Integer.highestOneBit(TypeUtil.ceilToNextPowerOfTwo(val)));
         }
     }
 

@@ -395,7 +395,9 @@ public class ArrayByteBufferPoolTest
     {
         ArrayByteBufferPool pool1 = new ArrayByteBufferPool.Quadratic();
         String dump1 = pool1.dump();
-        assertThat(dump1, containsString("direct size=5\n"));
+        assertThat(dump1, containsString("direct size=7\n"));
+        assertThat(dump1, containsString("{capacity=1024,"));
+        assertThat(dump1, containsString("{capacity=2048,"));
         assertThat(dump1, containsString("{capacity=4096,"));
         assertThat(dump1, containsString("{capacity=8192,"));
         assertThat(dump1, containsString("{capacity=16384,"));
@@ -410,7 +412,7 @@ public class ArrayByteBufferPoolTest
         assertThat(dump2, containsString("{capacity=512,"));
         assertThat(dump2, containsString("{capacity=800,"));
 
-        ArrayByteBufferPool pool3 = new ArrayByteBufferPool.Quadratic(0, 200, Integer.MAX_VALUE);
+        ArrayByteBufferPool pool3 = new ArrayByteBufferPool.Quadratic(1, 200, Integer.MAX_VALUE);
         String dump3 = pool3.dump();
         assertThat(dump3, containsString("direct size=9\n"));
         assertThat(dump3, containsString("{capacity=1,"));
