@@ -151,6 +151,8 @@ public class DefaultProvider extends ContainerLifeCycle implements AppProvider, 
      */
     public void addMonitoredDirectory(Path dir)
     {
+        if (LOG.isDebugEnabled())
+            LOG.debug("Adding monitored directory: {}", dir);
         if (isStarted())
             throw new IllegalStateException("Unable to add monitored directory while running");
         monitoredDirs.add(Objects.requireNonNull(dir));
@@ -241,6 +243,8 @@ public class DefaultProvider extends ContainerLifeCycle implements AppProvider, 
 
     public void setEnvironmentsDirectory(Path dir)
     {
+        if (LOG.isDebugEnabled())
+            LOG.debug("Setting Environments directory: {}", dir);
         if (isStarted())
             throw new IllegalStateException("Unable to add environments directory while running");
         environmentsDir = dir;
@@ -256,9 +260,11 @@ public class DefaultProvider extends ContainerLifeCycle implements AppProvider, 
         if (isStarted())
             throw new IllegalStateException("Unable to add monitored directories while running");
 
+        monitoredDirs.clear();
+
         for (Path dir : directories)
         {
-            monitoredDirs.add(Objects.requireNonNull(dir));
+            addMonitoredDirectory(dir);
         }
     }
 
@@ -509,7 +515,7 @@ public class DefaultProvider extends ContainerLifeCycle implements AppProvider, 
     protected void doStart() throws Exception
     {
         if (LOG.isDebugEnabled())
-            LOG.debug("{}.doStart()", this.getClass().getSimpleName());
+            LOG.debug("{} doStart()", this);
         if (monitoredDirs.isEmpty())
             throw new IllegalStateException("No monitored dir specified");
 
