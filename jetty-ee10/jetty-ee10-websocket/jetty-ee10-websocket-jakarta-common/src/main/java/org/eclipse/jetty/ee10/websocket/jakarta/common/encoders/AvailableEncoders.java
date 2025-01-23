@@ -160,33 +160,7 @@ public class AvailableEncoders implements Predicate<Class<?>>, Closeable
             throw new InvalidWebSocketException(err.toString());
         }
 
-        try
-        {
-            RegisteredEncoder conflicts = registeredEncoders.stream()
-                .filter(registered -> registered.isType(objectType))
-                .filter(registered -> !registered.primitive)
-                .findFirst()
-                .get();
-
-            if (conflicts.encoder.equals(encoder) && conflicts.implementsInterface(interfaceClass))
-            {
-                // Same encoder as what is there already, don't bother adding it again.
-                return;
-            }
-
-            StringBuilder err = new StringBuilder();
-            err.append("Duplicate Encoder Object type ");
-            err.append(objectType.getName());
-            err.append(" in ");
-            err.append(encoder.getName());
-            err.append(", previously declared in ");
-            err.append(conflicts.encoder.getName());
-            throw new InvalidWebSocketException(err.toString());
-        }
-        catch (NoSuchElementException e)
-        {
-            registeredEncoders.addFirst(new RegisteredEncoder(encoder, interfaceClass, objectType));
-        }
+        registeredEncoders.addFirst(new RegisteredEncoder(encoder, interfaceClass, objectType));
     }
 
     public List<RegisteredEncoder> supporting(Class<? extends Encoder> interfaceType)
