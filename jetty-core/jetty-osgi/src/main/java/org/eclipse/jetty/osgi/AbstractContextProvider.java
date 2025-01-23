@@ -63,7 +63,6 @@ public abstract class AbstractContextProvider extends AbstractLifeCycle implemen
         return _attributes;
     }
     
-    @Override
     public ContextHandler createContextHandler(App app) throws Exception
     {
         if (app == null)
@@ -71,7 +70,6 @@ public abstract class AbstractContextProvider extends AbstractLifeCycle implemen
 
         //Create a ContextHandler suitable to deploy in OSGi
         ContextHandler h = _contextFactory.createContextHandler(this, app);
-
         return h;
     }
 
@@ -81,11 +79,8 @@ public abstract class AbstractContextProvider extends AbstractLifeCycle implemen
         _deploymentManager = deploymentManager;
     }
 
-    @Override
     public String getEnvironmentName()
     {
-        // TODO: when AppProvider.getEnvironmentName is eventually removed, leave this method here for
-        // these OSGI based AppProviders to use.
         return _environment;
     }
 

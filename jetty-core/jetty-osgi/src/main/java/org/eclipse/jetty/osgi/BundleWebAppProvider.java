@@ -185,8 +185,9 @@ public class BundleWebAppProvider extends AbstractContextProvider implements Bun
                 //TODO : we don't know whether an app is actually deployed, as deploymentManager swallows all
                 //exceptions inside the impl of addApp. Need to send the Event and also register as a service
                 //only if the deployment succeeded
-                OSGiApp app = new OSGiApp(getDeploymentManager(), this, bundle);
+                OSGiApp app = new OSGiApp(bundle);
                 app.setPathToResourceBase(staticResourcesLocation);
+                app.setContextHandler(createContextHandler(app));
                 _bundleMap.put(bundle, app);
                 getDeploymentManager().addApp(app);
                 return true;
@@ -196,7 +197,8 @@ public class BundleWebAppProvider extends AbstractContextProvider implements Bun
             if (bundle.getEntry("/WEB-INF/web.xml") != null)
             {
                 String base = ".";
-                OSGiApp app = new OSGiApp(getDeploymentManager(), this, bundle);
+                OSGiApp app = new OSGiApp(bundle);
+                app.setContextHandler(createContextHandler(app));
                 app.setPathToResourceBase(base);
                 _bundleMap.put(bundle, app);
                 getDeploymentManager().addApp(app);
@@ -208,8 +210,9 @@ public class BundleWebAppProvider extends AbstractContextProvider implements Bun
             {
                 //Could be a static webapp with no web.xml
                 String base = ".";
-                OSGiApp app = new OSGiApp(getDeploymentManager(), this, bundle);
+                OSGiApp app = new OSGiApp(bundle);
                 app.setPathToResourceBase(base);
+                app.setContextHandler(createContextHandler(app));
                 _bundleMap.put(bundle, app);
                 getDeploymentManager().addApp(app);
                 return true;

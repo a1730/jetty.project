@@ -21,10 +21,9 @@ import java.util.Dictionary;
 import java.util.Enumeration;
 import java.util.Hashtable;
 import java.util.Objects;
+import java.util.Properties;
 
 import org.eclipse.jetty.deploy.App;
-import org.eclipse.jetty.deploy.AppProvider;
-import org.eclipse.jetty.deploy.DeploymentManager;
 import org.eclipse.jetty.osgi.util.BundleFileLocatorHelperFactory;
 import org.eclipse.jetty.server.Deployable;
 import org.eclipse.jetty.server.handler.ContextHandler;
@@ -42,11 +41,14 @@ import org.slf4j.LoggerFactory;
  *
  * Base class representing info about a WebAppContext/ContextHandler to be deployed into jetty.
  */
-public class OSGiApp extends App
+public class OSGiApp implements App
 {
     private static final Logger LOG = LoggerFactory.getLogger(OSGiApp.class);
 
+    private final String _bundleName;
+    private final Path _bundlePath;
     protected Bundle _bundle;
+    protected Properties _properties;
     protected ServiceRegistration _registration;
     protected ContextHandler _contextHandler;
     protected String _pathToResourceBase;
@@ -114,21 +116,16 @@ public class OSGiApp extends App
 
         return contextPath;
     }
-    
-    /**
-     * @param manager the DeploymentManager to which to deploy
-     * @param provider the provider that discovered the context/webapp
-     * @param bundle the bundle associated with the context/webapp
-     */
-    public OSGiApp(DeploymentManager manager, AppProvider provider, Bundle bundle)
+
+    public OSGiApp(Bundle bundle)
     throws Exception
     {
-        super(manager, provider, getBundlePath(bundle));
-
+        _bundleName = bundle.getSymbolicName();
+        _bundlePath = getBundlePath(bundle);
         _bundle = Objects.requireNonNull(bundle);
         _bundleResource = getBundleAsResource(bundle);
-        
-        //copy selected bundle headers into the properties
+
+        // copy selected bundle headers into the properties
         Dictionary<String, String> headers = bundle.getHeaders();
         Enumeration<String> keys = headers.keys();
         while (keys.hasMoreElements())
@@ -136,7 +133,9 @@ public class OSGiApp extends App
             String key = keys.nextElement();
             String val = headers.get(key);
             if (Deployable.ENVIRONMENT.equalsIgnoreCase(key) || OSGiWebappConstants.JETTY_ENVIRONMENT.equalsIgnoreCase(key))
+            {
                 getProperties().put(Deployable.ENVIRONMENT, val);
+            }
             else if (Deployable.DEFAULTS_DESCRIPTOR.equalsIgnoreCase(key) || OSGiWebappConstants.JETTY_DEFAULT_WEB_XML_PATH.equalsIgnoreCase(key))
             {
                 getProperties().put(Deployable.DEFAULTS_DESCRIPTOR, val);
@@ -155,17 +154,31 @@ public class OSGiApp extends App
         setContextPath(getContextPath(bundle));
     }
 
+    @Override
+    public String getName()
+    {
+        return _bundleName;
+    }
+
+    public Path getPath()
+    {
+        return _bundlePath;
+    }
+
+    public Properties getProperties()
+    {
+        return _properties;
+    }
+
     public Resource getBundleResource()
     {
         return _bundleResource;
     }
 
     @Override
-    public ContextHandler getContextHandler() throws Exception
+    public ContextHandler getContextHandler()
     {
-        if (_contextHandler == null)
-                _contextHandler = getAppProvider().createContextHandler(this);
-            return _contextHandler;
+        return _contextHandler;
     }
 
     public void setContextHandler(ContextHandler contextHandler)
@@ -183,7 +196,6 @@ public class OSGiApp extends App
         _pathToResourceBase = path;
     }
 
-    @Override
     public String getContextPath()
     {
         return _contextPath;

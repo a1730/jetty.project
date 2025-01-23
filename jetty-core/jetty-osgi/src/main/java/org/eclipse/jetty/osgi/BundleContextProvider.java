@@ -23,7 +23,6 @@ import java.util.Hashtable;
 import java.util.List;
 import java.util.Map;
 
-import org.eclipse.jetty.deploy.App;
 import org.eclipse.jetty.osgi.util.Util;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.util.StringUtil;
@@ -45,9 +44,9 @@ public class BundleContextProvider extends AbstractContextProvider implements Bu
 {
     private static final Logger LOG = LoggerFactory.getLogger(AbstractContextProvider.class);
 
-    private Map<Path, App> _appMap = new HashMap<>();
+    private Map<Path, OSGiApp> _appMap = new HashMap<>();
 
-    private Map<Bundle, List<App>> _bundleMap = new HashMap<>();
+    private Map<Bundle, List<OSGiApp>> _bundleMap = new HashMap<>();
 
     private ServiceRegistration _serviceRegForBundles;
 
@@ -77,7 +76,7 @@ public class BundleContextProvider extends AbstractContextProvider implements Bu
         {
             try
             {
-                String serverName = (String)bundle.getHeaders().get(OSGiServerConstants.MANAGED_JETTY_SERVER_NAME);
+                String serverName = bundle.getHeaders().get(OSGiServerConstants.MANAGED_JETTY_SERVER_NAME);
                 if ((StringUtil.isBlank(serverName) && _serverName.equals(OSGiServerConstants.MANAGED_JETTY_SERVER_DEFAULT_NAME)) ||
                     (!StringUtil.isBlank(serverName) && (serverName.equals(_serverName))))
                 {
@@ -121,7 +120,7 @@ public class BundleContextProvider extends AbstractContextProvider implements Bu
         _tracker.open();
 
         //register as an osgi service for deploying contexts defined in a bundle, advertising the name of the jetty Server instance we are related to
-        Dictionary<String, String> properties = new Hashtable<String, String>();
+        Dictionary<String, String> properties = new Hashtable<>();
         properties.put(OSGiServerConstants.MANAGED_JETTY_SERVER_NAME, serverName);
         _serviceRegForBundles = FrameworkUtil.getBundle(this.getClass()).getBundleContext().registerService(BundleProvider.class.getName(), this, properties);
         super.doStart();
@@ -181,26 +180,21 @@ public class BundleContextProvider extends AbstractContextProvider implements Bu
      
         String[] tmp = contextFiles.split("[,;]");
         for (String contextFile : tmp)
-        {            
-            OSGiApp app = new OSGiApp(getDeploymentManager(), this, bundle);
+        {
+            OSGiApp app = new OSGiApp(bundle);
             URI contextFilePath = Util.resolvePathAsLocalizedURI(contextFile, app.getBundle(), jettyHomePath);
             
             //set up the single context file for this deployment
             app.getProperties().put(OSGiWebappConstants.JETTY_CONTEXT_FILE_PATH, contextFilePath.toString());
-            
+            app.setContextHandler(createContextHandler(app));
             _appMap.put(app.getPath(), app);
-            List<App> apps = _bundleMap.get(bundle);
-            if (apps == null)
-            {
-                apps = new ArrayList<App>();
-                _bundleMap.put(bundle, apps);
-            }
+            List<OSGiApp> apps = _bundleMap.computeIfAbsent(bundle, b -> new ArrayList<>());
             apps.add(app);
             getDeploymentManager().addApp(app);
             added = true;
         }
 
-        return added; //true if even 1 context from this bundle was added
+        return added; // true if even 1 context from this bundle was added
     }
 
     /**
@@ -212,11 +206,11 @@ public class BundleContextProvider extends AbstractContextProvider implements Bu
     @Override
     public boolean bundleRemoved(Bundle bundle) throws Exception
     {
-        List<App> apps = _bundleMap.remove(bundle);
+        List<OSGiApp> apps = _bundleMap.remove(bundle);
         boolean removed = false;
         if (apps != null)
         {
-            for (App app : apps)
+            for (OSGiApp app : apps)
             {
                 if (_appMap.remove(app.getPath()) != null)
                 {

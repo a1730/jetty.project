@@ -30,7 +30,7 @@ import org.eclipse.jetty.deploy.App;
 import org.eclipse.jetty.deploy.AppLifeCycle;
 import org.eclipse.jetty.deploy.DeploymentManager;
 import org.eclipse.jetty.deploy.graph.Node;
-import org.eclipse.jetty.deploy.providers.ContextProvider;
+import org.eclipse.jetty.deploy.providers.DefaultProvider;
 import org.eclipse.jetty.ee9.webapp.AbstractConfiguration;
 import org.eclipse.jetty.ee9.webapp.Configuration;
 import org.eclipse.jetty.ee9.webapp.Configurations;
@@ -50,7 +50,6 @@ import org.eclipse.jetty.toolchain.test.MavenTestingUtils;
 import org.eclipse.jetty.toolchain.test.jupiter.WorkDir;
 import org.eclipse.jetty.toolchain.test.jupiter.WorkDirExtension;
 import org.eclipse.jetty.util.component.Environment;
-import org.eclipse.jetty.util.resource.ResourceFactory;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -80,8 +79,6 @@ public class DeploymentErrorTest
         connector.setPort(0);
         server.addConnector(connector);
         
-        ResourceFactory resourceFactory = ResourceFactory.of(server);
-
         // Empty contexts collections
         contexts = new ContextHandlerCollection();
 
@@ -101,9 +98,9 @@ public class DeploymentErrorTest
         }
 
         System.setProperty("test.docroots", docroots.toAbsolutePath().toString());
-        ContextProvider appProvider = new ContextProvider();
-        Environment.ensure("ee9");
-        appProvider.setMonitoredDirResource(resourceFactory.newResource(docroots));
+        DefaultProvider appProvider = new DefaultProvider();
+        appProvider.configureEnvironment("ee9");
+        appProvider.addMonitoredDirectory(docroots);
         appProvider.setScanInterval(1);
         deploymentManager.addAppProvider(appProvider);
         server.addBean(deploymentManager);
@@ -330,7 +327,11 @@ public class DeploymentErrorTest
     {
         for (App app : apps)
         {
-            if (contextPath.equals(app.getContextPath()))
+            ContextHandler contextHandler = app.getContextHandler();
+            if (contextHandler == null)
+                continue; // skip
+
+            if (contextPath.equals(contextHandler.getContextPath()))
                 return app;
         }
         return null;
@@ -396,9 +397,13 @@ public class DeploymentErrorTest
         }
 
         @Override
-        public void processBinding(Node node, App app)
+        public void processBinding(DeploymentManager deploymentManager, Node node, App app)
         {
-            if (app.getContextPath().equalsIgnoreCase(expectedContextPath))
+            ContextHandler contextHandler = app.getContextHandler();
+            if (contextHandler == null)
+                return;
+
+            if (contextHandler.getContextPath().equalsIgnoreCase(expectedContextPath))
             {
                 if (node.getName().equalsIgnoreCase(AppLifeCycle.STARTING))
                 {

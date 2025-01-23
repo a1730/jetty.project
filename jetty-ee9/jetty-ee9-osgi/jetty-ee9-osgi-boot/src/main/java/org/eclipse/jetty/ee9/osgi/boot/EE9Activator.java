@@ -149,10 +149,16 @@ public class EE9Activator implements BundleActivator
             {
                 for (AppProvider provider : deployer.get().getAppProviders())
                 {
-                    if (BundleContextProvider.class.isInstance(provider) && ENVIRONMENT.equalsIgnoreCase(provider.getEnvironmentName()))
-                        contextProvider = BundleContextProvider.class.cast(provider);
-                    if (BundleWebAppProvider.class.isInstance(provider) && ENVIRONMENT.equalsIgnoreCase(provider.getEnvironmentName()))
-                        webAppProvider = BundleWebAppProvider.class.cast(provider);
+                    if (provider instanceof BundleContextProvider bundleContextProvider)
+                    {
+                        if (bundleContextProvider.getEnvironmentName().equalsIgnoreCase(ENVIRONMENT))
+                            contextProvider = bundleContextProvider;
+                    }
+                    if (provider instanceof BundleWebAppProvider bundleWebAppProvider)
+                    {
+                        if (bundleWebAppProvider.getEnvironmentName().equalsIgnoreCase(ENVIRONMENT))
+                            webAppProvider = bundleWebAppProvider;
+                    }
                 }
                 if (contextProvider == null)
                 {
@@ -261,7 +267,7 @@ public class EE9Activator implements BundleActivator
         throws Exception
         {
             OSGiApp osgiApp = OSGiApp.class.cast(app);
-            String jettyHome = (String)app.getDeploymentManager().getServer().getAttribute(OSGiServerConstants.JETTY_HOME);
+            String jettyHome = (String)provider.getDeploymentManager().getServer().getAttribute(OSGiServerConstants.JETTY_HOME);
             Path jettyHomePath = (StringUtil.isBlank(jettyHome) ? null : Paths.get(jettyHome));
 
             ContextHandler contextHandler = new ContextHandler();
@@ -270,7 +276,7 @@ public class EE9Activator implements BundleActivator
             contextHandler.setBaseResource(osgiApp.getBundleResource());
             
             // provides access to core classes
-            ClassLoader coreLoader = (ClassLoader)osgiApp.getDeploymentManager().getServer().getAttribute(OSGiServerConstants.SERVER_CLASSLOADER); 
+            ClassLoader coreLoader = (ClassLoader)provider.getDeploymentManager().getServer().getAttribute(OSGiServerConstants.SERVER_CLASSLOADER);
             if (LOG.isDebugEnabled())
                 LOG.debug("Core classloader = {}", coreLoader.getClass());
             
@@ -282,7 +288,7 @@ public class EE9Activator implements BundleActivator
             contextHandler.setClassLoader(classLoader);
 
             //Apply any context xml file
-            String tmp = osgiApp.getProperties().get(OSGiWebappConstants.JETTY_CONTEXT_FILE_PATH);
+            String tmp = osgiApp.getProperties().getProperty(OSGiWebappConstants.JETTY_CONTEXT_FILE_PATH);
             final URI contextXmlURI = Util.resolvePathAsLocalizedURI(tmp, osgiApp.getBundle(), jettyHomePath);
 
             if (contextXmlURI != null)
@@ -297,9 +303,9 @@ public class EE9Activator implements BundleActivator
                         WebAppClassLoader.runWithServerClassAccess(() ->
                         {
                             Map<String, String> properties = new HashMap<>();
-                            xmlConfiguration.getIdMap().put("Server", osgiApp.getDeploymentManager().getServer());
+                            xmlConfiguration.getIdMap().put("Server", provider.getDeploymentManager().getServer());
                             properties.put(OSGiWebappConstants.JETTY_BUNDLE_ROOT, osgiApp.getPath().toUri().toString());
-                            properties.put(OSGiServerConstants.JETTY_HOME, (String)osgiApp.getDeploymentManager().getServer().getAttribute(OSGiServerConstants.JETTY_HOME));
+                            properties.put(OSGiServerConstants.JETTY_HOME, (String)provider.getDeploymentManager().getServer().getAttribute(OSGiServerConstants.JETTY_HOME));
                             xmlConfiguration.getProperties().putAll(properties);
                             xmlConfiguration.configure(contextHandler);
                             return null;
@@ -356,7 +362,7 @@ public class EE9Activator implements BundleActivator
             if (!(app instanceof OSGiApp osgiApp))
                 throw new IllegalArgumentException("App is not OSGi");
 
-            String jettyHome = (String)app.getDeploymentManager().getServer().getAttribute(OSGiServerConstants.JETTY_HOME);
+            String jettyHome = (String)provider.getDeploymentManager().getServer().getAttribute(OSGiServerConstants.JETTY_HOME);
             Path jettyHomePath = StringUtil.isBlank(jettyHome) ? null : ResourceFactory.of(provider.getServer()).newResource(jettyHome).getPath();
 
             WebAppContext webApp = new WebAppContext();
@@ -365,7 +371,7 @@ public class EE9Activator implements BundleActivator
             webApp.initializeDefaults(provider.getAttributes());
             
             // provides access to core classes
-            ClassLoader coreLoader = (ClassLoader)osgiApp.getDeploymentManager().getServer().getAttribute(OSGiServerConstants.SERVER_CLASSLOADER); 
+            ClassLoader coreLoader = (ClassLoader)provider.getDeploymentManager().getServer().getAttribute(OSGiServerConstants.SERVER_CLASSLOADER);
             if (LOG.isDebugEnabled())
                 LOG.debug("Core classloader = {}", coreLoader);
             
@@ -408,7 +414,7 @@ public class EE9Activator implements BundleActivator
             
             //Set up configuration from manifest headers
             //extra classpath
-            String extraClasspath = osgiApp.getProperties().get(OSGiWebappConstants.JETTY_EXTRA_CLASSPATH);
+            String extraClasspath = osgiApp.getProperties().getProperty(OSGiWebappConstants.JETTY_EXTRA_CLASSPATH);
             if (extraClasspath != null)
                 webApp.setExtraClasspath(extraClasspath);
 
@@ -449,7 +455,7 @@ public class EE9Activator implements BundleActivator
             //Then look in the property OSGiWebappConstants.JETTY_CONTEXT_FILE_PATH and apply the first one
             if (contextXmlURL == null)
             {
-                String tmp = osgiApp.getProperties().get(OSGiWebappConstants.JETTY_CONTEXT_FILE_PATH);
+                String tmp = osgiApp.getProperties().getProperty(OSGiWebappConstants.JETTY_CONTEXT_FILE_PATH);
                 if (tmp != null)
                 {
                     String[] filenames = tmp.split("[,;]");
@@ -471,9 +477,9 @@ public class EE9Activator implements BundleActivator
                         WebAppClassLoader.runWithServerClassAccess(() ->
                         {
                             Map<String, String> properties = new HashMap<>();
-                            xmlConfiguration.getIdMap().put("Server", osgiApp.getDeploymentManager().getServer());
+                            xmlConfiguration.getIdMap().put("Server", provider.getDeploymentManager().getServer());
                             properties.put(OSGiWebappConstants.JETTY_BUNDLE_ROOT, osgiApp.getPath().toUri().toString());
-                            properties.put(OSGiServerConstants.JETTY_HOME, (String)osgiApp.getDeploymentManager().getServer().getAttribute(OSGiServerConstants.JETTY_HOME));
+                            properties.put(OSGiServerConstants.JETTY_HOME, (String)provider.getDeploymentManager().getServer().getAttribute(OSGiServerConstants.JETTY_HOME));
                             xmlConfiguration.getProperties().putAll(properties);
                             xmlConfiguration.configure(webApp);
                             return null;
@@ -549,7 +555,7 @@ public class EE9Activator implements BundleActivator
             }
 
             //web.xml
-            String tmp = osgiApp.getProperties().get(OSGiWebappConstants.JETTY_WEB_XML_PATH);
+            String tmp = osgiApp.getProperties().getProperty(OSGiWebappConstants.JETTY_WEB_XML_PATH);
             if (!StringUtil.isBlank(tmp))
             {
                 URI webXml = Util.resolvePathAsLocalizedURI(tmp, osgiApp.getBundle(), jettyHomePath);
@@ -558,7 +564,7 @@ public class EE9Activator implements BundleActivator
             }
 
             // webdefault-ee9.xml
-            tmp = osgiApp.getProperties().get(OSGiWebappConstants.JETTY_DEFAULT_WEB_XML_PATH);
+            tmp = osgiApp.getProperties().getProperty(OSGiWebappConstants.JETTY_DEFAULT_WEB_XML_PATH);
             if (tmp != null)
             {
                 URI defaultWebXml = Util.resolvePathAsLocalizedURI(tmp, osgiApp.getBundle(), jettyHomePath);

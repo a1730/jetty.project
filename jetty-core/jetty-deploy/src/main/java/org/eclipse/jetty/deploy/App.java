@@ -20,126 +20,17 @@ import org.eclipse.jetty.server.handler.ContextHandler;
  */
 public interface App
 {
+    /**
+     * The application name.
+     *
+     * @return the application name.
+     */
     String getName();
 
     /**
      * Get the active ContextHandler for this App.
-     * The App is not responsible for creating the ContextHandler, the AppProvider is.
+     *
+     * @return the ContextHandler for the App.  null means the ContextHandler hasn't been created yet.
      */
-    // TODO: make not default
-    default ContextHandler getContextHandler()
-    {
-        return null;
-    }
-
-//    private final DeploymentManager _manager;
-//    private final AppProvider _provider;
-//    private final Path _path;
-//    private final Map<String, String> _properties = new HashMap<>();
-//    private ContextHandler _context;
-//
-//    /**
-//     * Create an App with specified Origin ID and archivePath
-//     * <p>
-//     * Any properties file that exists with the same {@link FileID#getBasename(Path)} as the
-//     * filename passed will be used to initialize the properties returned by {@link #getProperties()}.
-//     *
-//     * @param manager the deployment manager
-//     * @param provider the app provider
-//     * @param path the path to the application directory, war file or XML descriptor
-//     * @see App#getContextPath()
-//     */
-//    public App(DeploymentManager manager, AppProvider provider, Path path)
-//    {
-//        _manager = manager;
-//        _provider = provider;
-//        _path = path;
-//
-//        if (path != null)
-//        {
-//            try
-//            {
-//                String basename = FileID.getBasename(path);
-//                Path properties = path.getParent().resolve(basename + ".properties");
-//                if (Files.exists(properties))
-//                {
-//                    try (InputStream stream = Files.newInputStream(properties))
-//                    {
-//                        Properties p = new Properties();
-//                        p.load(stream);
-//                        p.stringPropertyNames().forEach(k -> _properties.put(k, p.getProperty(k)));
-//                    }
-//                }
-//            }
-//            catch (Exception e)
-//            {
-//                throw new RuntimeException(e);
-//            }
-//        }
-//    }
-//
-//    /**
-//     * @return The deployment manager
-//     */
-//    public DeploymentManager getDeploymentManager()
-//    {
-//        return _manager;
-//    }
-//
-//    /**
-//     * @return The AppProvider
-//     */
-//    public AppProvider getAppProvider()
-//    {
-//        return _provider;
-//    }
-//
-//    protected ContextHandler newContextHandler()
-//    {
-//        return getDeploymentManager().getContextHandlerFactory().newContextHandler(this);
-//    }
-//
-//    /**
-//     * Get ContextHandler for the App.
-//     *
-//     * Create it if needed.
-//     *
-//     * @return the {@link ContextHandler} to use for the App when fully started.
-//     * (Portions of which might be ignored when App is not yet
-//     * {@link AppLifeCycle#DEPLOYED} or {@link AppLifeCycle#STARTED})
-//     * @throws Exception if unable to get the context handler
-//     */
-//    public ContextHandler getContextHandler() throws Exception
-//    {
-//        if (_context == null)
-//            _context = newContextHandler();
-//        return _context;
-//    }
-//
-//    /**
-//     * The context path {@link App} relating to how it is installed on the
-//     * jetty server side.
-//     *
-//     * @return the contextPath for the App
-//     */
-//    public String getContextPath()
-//    {
-//        return _context == null ? null : _context.getContextPath();
-//    }
-//
-//    /**
-//     * The origin of this {@link App} as specified by the {@link AppProvider}
-//     *
-//     * @return String representing the origin of this app.
-//     */
-//    public Path getPath()
-//    {
-//        return _path;
-//    }
-//
-//    @Override
-//    public String toString()
-//    {
-//        return "App@%x[%s,%s,%s]".formatted(hashCode(), getEnvironmentName(), _context, _path);
-//    }
+    ContextHandler getContextHandler();
 }
