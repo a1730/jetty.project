@@ -26,6 +26,7 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Properties;
@@ -129,21 +130,12 @@ public class DefaultProvider extends ContainerLifeCycle implements AppProvider, 
 
     public DefaultProvider()
     {
-        this(new MonitoredPathFilter());
+        filenameFilter = new MonitoredPathFilter(monitoredDirs);
     }
 
     public DefaultProvider(FilenameFilter filter)
     {
         filenameFilter = filter;
-        setScanInterval(0);
-    }
-
-    private static String asStringList(Collection<Path> paths)
-    {
-        return paths.stream()
-            .sorted(PathCollators.byName(true))
-            .map(Path::toString)
-            .collect(Collectors.joining(", ", "[", "]"));
     }
 
     /**
@@ -1023,6 +1015,13 @@ public class DefaultProvider extends ContainerLifeCycle implements AppProvider, 
 
     public static class MonitoredPathFilter implements FilenameFilter
     {
+        private final List<Path> monitoredDirs;
+
+        public MonitoredPathFilter(List<Path> monitoredDirs)
+        {
+            this.monitoredDirs = monitoredDirs;
+        }
+
         @Override
         public boolean accept(File dir, String name)
         {
@@ -1030,14 +1029,6 @@ public class DefaultProvider extends ContainerLifeCycle implements AppProvider, 
                 return false;
 
             Path path = dir.toPath().resolve(name);
-
-            // We don't monitor subdirectories.
-            if (Files.isDirectory(path))
-                return false;
-
-            // Synthetic files (like consoles, printers, serial ports, etc) are ignored.
-            if (!Files.isRegularFile(path))
-                return false;
 
             try
             {
@@ -1053,8 +1044,28 @@ public class DefaultProvider extends ContainerLifeCycle implements AppProvider, 
                 // ignore
             }
 
-            // The filetypes that are monitored, and we want updates for when they change.
-            return FileID.isExtension(name, "jar", "war", "xml", "properties");
+            if (Files.isRegularFile(path) && FileID.isExtension(name, "jar", "war", "xml", "properties"))
+                return true;
+
+            // From this point down, we looking for things that are possible directory deployments.
+            if (!Files.isDirectory(path))
+                return false;
+
+            // Don't deploy monitored paths
+            if (monitoredDirs.contains(path))
+                return false;
+
+            String lowerName = name.toLowerCase(Locale.ENGLISH);
+
+            // is it a nominated config directory
+            if (lowerName.endsWith(".d"))
+                return false;
+
+            // ignore source control directories
+            if ("cvs".equals(lowerName) || "cvsroot".equals(lowerName))
+                return false;
+
+            return true;
         }
     }
 }
