@@ -1966,8 +1966,8 @@ public class DistributionTests extends AbstractJettyHomeTest
             Files.copy(webAppJar, Files.createDirectories(webAppDirLib).resolve("webapp.jar"));
             Files.writeString(webapps.resolve(name + ".xml"), """
                 <?xml version="1.0"?>
-                <!DOCTYPE Configure PUBLIC "-//Jetty//Configure//EN" "https://jetty.org/configure_10_0.dtd">
-                <Configure class="org.eclipse.jetty.server.handler.ContextHandler">
+                <!DOCTYPE Configure PUBLIC "-//Jetty//Configure//EN" "https://jetty.org/configure.dtd">
+                <Configure class="org.eclipse.jetty.server.handler.CoreWebAppContext">
                   <Set name="contextPath">/test</Set>
                   <Set name="handler">
                     <New class="org.eclipse.jetty.test.http2.client.transport.provided.HTTP2ClientTransportProvidedHandler" />

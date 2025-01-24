@@ -17,14 +17,22 @@ import java.io.IOException;
 import java.net.URI;
 import java.net.URL;
 import java.net.URLClassLoader;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 
+import org.eclipse.jetty.io.RuntimeIOException;
+import org.eclipse.jetty.server.Deployable;
+import org.eclipse.jetty.server.Handler;
+import org.eclipse.jetty.util.Attributes;
 import org.eclipse.jetty.util.FileID;
+import org.eclipse.jetty.util.URIUtil;
 import org.eclipse.jetty.util.annotation.ManagedAttribute;
 import org.eclipse.jetty.util.component.Environment;
+import org.eclipse.jetty.util.resource.PathCollators;
 import org.eclipse.jetty.util.resource.Resource;
 import org.eclipse.jetty.util.resource.ResourceFactory;
 import org.eclipse.jetty.util.resource.Resources;
@@ -51,10 +59,11 @@ import org.slf4j.LoggerFactory;
  *     unpacked into the temp directory defined by this core webapp.
  * </p>
  */
-public class CoreWebAppContext extends ContextHandler
+public class CoreWebAppContext extends ContextHandler implements Deployable
 {
     private static final Logger LOG = LoggerFactory.getLogger(CoreWebAppContext.class);
     private static final String ORIGINAL_BASE_RESOURCE = "org.eclipse.jetty.webapp.originalBaseResource";
+    private boolean _initialized = false;
     private List<Resource> _extraClasspath;
     private boolean _builtClassLoader = false;
 
@@ -76,6 +85,49 @@ public class CoreWebAppContext extends ContextHandler
     public List<Resource> getExtraClasspath()
     {
         return _extraClasspath == null ? Collections.emptyList() : _extraClasspath;
+    }
+
+    @Override
+    public void initializeDefaults(Attributes attributes)
+    {
+        try
+        {
+            // This CoreWebAppContext is arriving via a Deployer
+            for (String keyName : attributes.getAttributeNameSet())
+            {
+                Object value = attributes.getAttribute(keyName);
+
+                switch (keyName)
+                {
+                    case Deployable.OTHER_PATHS ->
+                    {
+                        // The Base Resource (before init) is a nominated directory ("/<name>.d/")
+
+                        //noinspection unchecked
+                        java.util.Collection<Path> deployablePaths = (java.util.Collection<Path>)value;
+                        Optional<Path> optionalDir = deployablePaths.stream()
+                            .sorted(PathCollators.byName(true))
+                            .filter(Files::isDirectory)
+                            .filter(p -> FileID.isExtension(p.getFileName().toString(), "d"))
+                            .findFirst();
+
+                        if (optionalDir.isPresent())
+                        {
+                            ResourceFactory resourceFactory = ResourceFactory.of(this);
+                            Resource resourceDir = resourceFactory.newResource(optionalDir.get());
+                            setBaseResource(resourceDir);
+                        }
+                    }
+                }
+            }
+
+            // Init the webapp, unpack if necessary, create the classloader, etc.
+            initWebApp();
+        }
+        catch (IOException e)
+        {
+            throw new RuntimeIOException("Unable to init " + this.getClass().getSimpleName(), e);
+        }
     }
 
     /**
@@ -155,48 +207,88 @@ public class CoreWebAppContext extends ContextHandler
 
     protected void initWebApp() throws IOException
     {
+        if (_initialized)
+        {
+            if (LOG.isDebugEnabled())
+                LOG.debug("Already initialized, not initializing again");
+            return;
+        }
+
         if (getBaseResource() == null)
         {
             // Nothing to do.
             return;
         }
 
-        // needs to be a directory (either raw, or archive mounted)
-        if (!Resources.isDirectory(getBaseResource()))
+        Resource base = getBaseResource();
+
+        if (!Resources.isDirectory(base))
         {
-            LOG.warn("Invalid Metadata Base Resource (not a directory): {}", getBaseResource());
-            return;
+            // see if we can unpack this reference.
+            if (FileID.isExtension(base.getURI(), "zip", "jar", "war"))
+            {
+                // We have an archive that needs to be unpacked
+                setAttribute(ORIGINAL_BASE_RESOURCE, base.getURI());
+                try (ResourceFactory.Closeable resourceFactory = ResourceFactory.closeable())
+                {
+                    URI archiveURI = URIUtil.toJarFileUri(base.getURI());
+                    Resource mountedArchive = resourceFactory.newResource(archiveURI);
+                    base = unpack(mountedArchive);
+                    setBaseResource(base);
+                }
+            }
+            else
+            {
+                throw new IllegalArgumentException("Unrecognized non-directory base resource type: " + base);
+            }
         }
 
-        Resource dir = getBaseResource();
-        // attempt to figure out if the resource is compressed or not
-        if (!dir.getURI().getScheme().equals("file"))
-        {
-            setAttribute(ORIGINAL_BASE_RESOURCE, dir.getURI());
-            dir = unpack(dir);
-            setBaseResource(dir);
-        }
+        _initialized = true;
 
-        Resource staticDir = getBaseResource().resolve("static");
+        Resource staticDir = base.resolve("static");
         if (Resources.isDirectory(staticDir))
         {
-            ResourceHandler resourceHandler = new ResourceHandler();
-            resourceHandler.setBaseResource(staticDir);
-            setHandler(resourceHandler);
+            if (!isResourceHandlerAlreadyPresent(staticDir))
+            {
+                ResourceHandler resourceHandler = new ResourceHandler();
+                resourceHandler.setBaseResource(staticDir);
+                setHandler(resourceHandler);
+            }
         }
+
+        // Don't override the user provided ClassLoader
+        if (getClassLoader() == null)
+        {
+            _builtClassLoader = true;
+            setClassLoader(newClassLoader(getBaseResource()));
+        }
+    }
+
+    private boolean isResourceHandlerAlreadyPresent(Resource staticDir)
+    {
+        boolean alreadyExists = false;
+        for (Handler handler : getHandlers())
+        {
+            if (handler instanceof ResourceHandler resourceHandler)
+            {
+                Resource baseResource = resourceHandler.getBaseResource();
+                if (baseResource != null)
+                {
+                    URI baseResourceURI = baseResource.getURI();
+                    if (baseResourceURI.equals(staticDir.getURI()))
+                    {
+                        alreadyExists = true;
+                    }
+                }
+            }
+        }
+        return alreadyExists;
     }
 
     @Override
     protected void doStart() throws Exception
     {
         initWebApp();
-
-        if (getClassLoader() == null)
-        {
-            _builtClassLoader = true;
-            // Build Classloader (since once wasn't created)
-            setClassLoader(newClassLoader(getBaseResource()));
-        }
 
         super.doStart();
     }
@@ -207,7 +299,10 @@ public class CoreWebAppContext extends ContextHandler
         if (_builtClassLoader)
         {
             setClassLoader(null);
+            _builtClassLoader = false;
         }
+
+        _initialized = false;
 
         super.doStop();
     }

@@ -113,6 +113,9 @@ public class DefaultContextHandlerFactory
         if (!Files.exists(mainPath))
             throw new IllegalStateException("App path does not exist " + mainPath);
 
+        deployAttributes.setAttribute(Deployable.MAIN_PATH, mainPath);
+        deployAttributes.setAttribute(Deployable.OTHER_PATHS, app.getPaths().keySet());
+
         String envName = app.getEnvironmentName();
         if (StringUtil.isBlank(envName))
         {
@@ -172,10 +175,6 @@ public class DefaultContextHandlerFactory
             // will use this attribute.
             deployAttributes.setAttribute(Deployable.WAR, mainPath.toString());
 
-            // Initialize any deployable
-            if (context instanceof Deployable deployable)
-                deployable.initializeDefaults(deployAttributes);
-
             return getContextHandler(context);
         }
         finally
@@ -227,7 +226,7 @@ public class DefaultContextHandlerFactory
                 });
 
             // Run configure against appropriate classloader.
-            ClassLoader xmlClassLoader = environment.getClassLoader();
+            ClassLoader xmlClassLoader = getClassLoader(context, environment);
             ClassLoader oldClassLoader = Thread.currentThread().getContextClassLoader();
             Thread.currentThread().setContextClassLoader(xmlClassLoader);
 
@@ -246,6 +245,21 @@ public class DefaultContextHandlerFactory
         }
     }
 
+    private ClassLoader getClassLoader(Object context, Environment environment)
+    {
+        if (context != null)
+        {
+            if (context instanceof ContextHandler contextHandler)
+            {
+                ClassLoader classLoader = contextHandler.getClassLoader();
+                if (classLoader != null)
+                    return classLoader;
+            }
+        }
+
+        return environment.getClassLoader();
+    }
+
     protected void initializeContextHandler(ContextHandler contextHandler, Path path, Attributes attributes)
     {
         if (LOG.isDebugEnabled())
@@ -253,10 +267,13 @@ public class DefaultContextHandlerFactory
 
         assert contextHandler != null;
 
-        if (contextHandler.getBaseResource() == null && Files.isDirectory(path))
+        if (contextHandler.getBaseResource() == null)
         {
-            ResourceFactory resourceFactory = ResourceFactory.of(contextHandler);
-            contextHandler.setBaseResource(resourceFactory.newResource(path));
+            if (Files.isDirectory(path))
+            {
+                ResourceFactory resourceFactory = ResourceFactory.of(contextHandler);
+                contextHandler.setBaseResource(resourceFactory.newResource(path));
+            }
         }
 
         // pass through properties as attributes directly
@@ -397,6 +414,9 @@ public class DefaultContextHandlerFactory
      */
     private Object newContextInstance(DefaultProvider provider, Environment environment, App app, Attributes attributes, Path path) throws Exception
     {
+        if (LOG.isDebugEnabled())
+            LOG.debug("newContextInstance({}, {}, {}, {})", provider, environment, app, path);
+
         Object context = newInstance((String)attributes.getAttribute(Deployable.CONTEXT_HANDLER_CLASS));
         if (context != null)
         {
@@ -406,17 +426,23 @@ public class DefaultContextHandlerFactory
 
             initializeContextPath(contextHandler, path);
             initializeContextHandler(contextHandler, path, attributes);
-            return context;
+
+            // Initialize any deployable
+            if (context instanceof Deployable deployable)
+                deployable.initializeDefaults(attributes);
         }
 
         if (FileID.isXml(path))
         {
-            context = applyXml(provider, null, path, environment, attributes);
+            context = applyXml(provider, context, path, environment, attributes);
             ContextHandler contextHandler = getContextHandler(context);
             if (contextHandler == null)
                 throw new IllegalStateException("Unknown context type of " + context);
             return context;
         }
+
+        if (context != null)
+            return context;
 
         // fallback to default from environment.
         context = newInstance((String)environment.getAttribute(Deployable.CONTEXT_HANDLER_CLASS_DEFAULT));

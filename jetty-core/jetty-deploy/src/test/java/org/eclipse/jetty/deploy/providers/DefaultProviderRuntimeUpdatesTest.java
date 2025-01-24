@@ -133,7 +133,7 @@ public class DefaultProviderRuntimeUpdatesTest extends AbstractCleanEnvironmentT
      * This addresses issue https://github.com/jetty/jetty.project/issues/12543
      */
     @Test
-    public void testSelectiveDeploy(WorkDir workDir) throws Exception
+    public void testRedeployIfAnyTrackedPathChanges(WorkDir workDir) throws Exception
     {
         Path testdir = workDir.getEmptyPathDir();
         createJettyBase(testdir);

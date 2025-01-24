@@ -371,6 +371,12 @@ public class DefaultProvider extends ContainerLifeCycle implements AppProvider, 
             // Using lower-case as defined by System Locale, as the files themselves from System FS.
             String basename = FileID.getBasename(path).toLowerCase();
 
+            // Strip the ".d" extension on directory basenames
+            if (Files.isDirectory(path) && FileID.isExtension(path, "d"))
+            {
+                basename = basename.substring(0, basename.length() - 2);
+            }
+
             if (isMonitoredPath(path))
             {
                 // we have a normal path entry
@@ -929,18 +935,34 @@ public class DefaultProvider extends ContainerLifeCycle implements AppProvider, 
 
         /**
          * The name of the class that this environment uses to create {@link ContextHandler}
-         * instances (can be class that implements {@code java.util.function.Supplier<Handler>}
-         * as well).
+         * instances (supports a class that implements {@code java.util.function.Supplier<Handler>} as well).
          *
          * <p>
-         * This is the fallback class used, if the context class itself isn't defined by
-         * the web application being deployed.
+         * This is the class used to create a ContextHandler for the environment before
+         * any XML files are loaded to configure the context.
          * </p>
          *
          * @param classname the classname for this environment's context deployable.
-         * @see Deployable#CONTEXT_HANDLER_CLASS_DEFAULT
+         * @see Deployable#CONTEXT_HANDLER_CLASS
          */
         public void setContextHandlerClass(String classname)
+        {
+            _environment.setAttribute(Deployable.CONTEXT_HANDLER_CLASS, classname);
+        }
+
+        /**
+         * The name of the default class that this environment uses to create {@link ContextHandler}
+         * instances (supports a class that implements {@code java.util.function.Supplier<Handler>} as well).
+         *
+         * <p>
+         * This is the fallback class used, if the context class itself isn't defined by
+         * the web application being deployed. (such as from an XML definition)
+         * </p>
+         *
+         * @param classname the default classname for this environment's context deployable.
+         * @see Deployable#CONTEXT_HANDLER_CLASS_DEFAULT
+         */
+        public void setDefaultContextHandlerClass(String classname)
         {
             _environment.setAttribute(Deployable.CONTEXT_HANDLER_CLASS_DEFAULT, classname);
         }
@@ -1059,7 +1081,7 @@ public class DefaultProvider extends ContainerLifeCycle implements AppProvider, 
 
             // is it a nominated config directory
             if (lowerName.endsWith(".d"))
-                return false;
+                return true;
 
             // ignore source control directories
             if ("cvs".equals(lowerName) || "cvsroot".equals(lowerName))

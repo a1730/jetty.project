@@ -7,7 +7,7 @@
   <Ref refid="defaultDeployer">
     <Call name="configureEnvironment">
       <Arg>ee8</Arg>
-      <Set name="contextHandlerClass">
+      <Set name="defaultContextHandlerClass">
         <Property name="contextHandlerClass" default="org.eclipse.jetty.ee8.webapp.WebAppContext" />
       </Set>
       <Set name="defaultsDescriptor">

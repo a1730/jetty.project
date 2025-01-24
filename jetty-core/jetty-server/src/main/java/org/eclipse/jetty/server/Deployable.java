@@ -68,6 +68,8 @@ public interface Deployable
     String SCI_ORDER = "jetty.deploy.servletContainerInitializerOrder";
     String WAR = "jetty.deploy.war";
     String WEBINF_SCAN_JARS = "jetty.deploy.webInfScanJarPattern";
+    String MAIN_PATH = "jetty.deploy.paths.main";
+    String OTHER_PATHS = "jetty.deploy.paths.other";
 
     void initializeDefaults(Attributes attributes);
 }

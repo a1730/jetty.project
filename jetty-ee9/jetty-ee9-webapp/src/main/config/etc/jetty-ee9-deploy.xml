@@ -7,7 +7,7 @@
   <Ref refid="defaultDeployer">
     <Call name="configureEnvironment">
       <Arg>ee9</Arg>
-      <Set name="contextHandlerClass">
+      <Set name="defaultContextHandlerClass">
         <Property name="contextHandlerClass" default="org.eclipse.jetty.ee9.webapp.WebAppContext" />
       </Set>
       <Set name="defaultsDescriptor">
