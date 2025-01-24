@@ -212,10 +212,9 @@ public class WebInfConfiguration extends AbstractConfiguration
 
                 if (war != null)
                 {
-                    Resource warResource = context.getResourceFactory().newResource(war);
-                    Path warPath = warResource.getPath();
+                    Path warPath = webApp.getPath();
                     if (warPath == null)
-                        throw new IllegalStateException("No path for " + warResource);
+                        throw new IllegalStateException("No path for " + webApp);
 
                     // look for a sibling like "foo/" to a "foo.war"
                     if (FileID.isWebArchive(warPath) && Files.exists(warPath))
