@@ -24,6 +24,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Queue;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.eclipse.jetty.http2.ErrorCode;
 import org.eclipse.jetty.http2.FlowControlStrategy;
@@ -37,7 +38,6 @@ import org.eclipse.jetty.io.EndPoint;
 import org.eclipse.jetty.io.EofException;
 import org.eclipse.jetty.io.RetainableByteBuffer;
 import org.eclipse.jetty.util.Callback;
-import org.eclipse.jetty.util.ExceptionUtil;
 import org.eclipse.jetty.util.IteratingCallback;
 import org.eclipse.jetty.util.component.Dumpable;
 import org.eclipse.jetty.util.thread.AutoLock;
@@ -89,25 +89,10 @@ public class HTTP2Flusher extends IteratingCallback implements Dumpable
             if (!processed)
                 return callback;
 
-            return new Callback.Nested(callback)
-            {
-                // TODO this needs to look at the ICB state and if the write has completed, then it can pass through
-                //      the success/fail call.   Otherwise it needs to just return and setup a callback from the ICB so
-                //      that the nested callback is called once the write is complete (It probably needs to capture the failed
-                //      exception to convert any succeeded call into a failed call as well)
-                @Override
-                public void failed(Throwable x)
-                {
-                    ExceptionUtil.addSuppressedIfNotAssociated(cause, x);
-                    super.failed(cause);
-                }
-
-                @Override
-                public void succeeded()
-                {
-                    super.failed(cause);
-                }
-            };
+            CancelCallback cancelCallback = new CancelCallback(callback, cause);
+            processedEntries.add(cancelCallback);
+            iterate();
+            return cancelCallback.asCancelCallback();
         }
     }
 
@@ -220,24 +205,24 @@ public class HTTP2Flusher extends IteratingCallback implements Dumpable
             {
                 boolean rethrow = true;
                 if (terminated instanceof HpackException.SessionException)
-                 {
-                     HTTP2Session.Entry entry = entries.peek();
-                     if (entry != null)
-                     {
-                         FrameType frameType = entry.frame().getType();
-                         if (frameType == FrameType.RST_STREAM || frameType == FrameType.GO_AWAY)
-                         {
-                             rethrow = false;
-                             if (frameType == FrameType.GO_AWAY)
-                             {
-                                 // Allow a SessionException to be processed once to send a GOAWAY.
-                                 terminated = new ClosedChannelException().initCause(terminated);
-                             }
-                         }
-                     }
-                 }
-                 if (rethrow)
-                     throw terminated;
+                {
+                    HTTP2Session.Entry entry = entries.peek();
+                    if (entry != null)
+                    {
+                        FrameType frameType = entry.frame().getType();
+                        if (frameType == FrameType.RST_STREAM || frameType == FrameType.GO_AWAY)
+                        {
+                            rethrow = false;
+                            if (frameType == FrameType.GO_AWAY)
+                            {
+                                // Allow a SessionException to be processed once to send a GOAWAY.
+                                terminated = new ClosedChannelException().initCause(terminated);
+                            }
+                        }
+                    }
+                }
+                if (rethrow)
+                    throw terminated;
             }
 
             WindowEntry windowEntry;
@@ -522,6 +507,50 @@ public class HTTP2Flusher extends IteratingCallback implements Dumpable
                 processedEntries.size(),
                 pendingEntries.size()
             );
+        }
+    }
+
+    private static class CancelCallback extends HTTP2Session.Entry
+    {
+        private final Throwable _cause;
+        private final AtomicBoolean _completed = new AtomicBoolean();
+
+        public CancelCallback(Callback callback, Throwable cause)
+        {
+            super(null, null, callback);
+            _cause = cause;
+        }
+
+        public Callback asCancelCallback()
+        {
+            return Callback.from(this::cancelCallbackCompleted);
+        }
+
+        private void cancelCallbackCompleted()
+        {
+            // If the Entry callback has completed we can run the nested callback
+            if (!_completed.compareAndSet(false, true))
+                super.failed(_cause);
+        }
+
+        @Override
+        public void completed()
+        {
+            // If the cancelCallback completed, then we must run the nested here
+            if (!_completed.compareAndSet(false, true))
+                super.failed(_cause); // TODO execute immediately?
+        }
+
+        @Override
+        public int getFrameBytesGenerated()
+        {
+            return 0;
+        }
+
+        @Override
+        public boolean generate(RetainableByteBuffer.Mutable accumulator) throws HpackException
+        {
+            throw new UnsupportedOperationException();
         }
     }
 
