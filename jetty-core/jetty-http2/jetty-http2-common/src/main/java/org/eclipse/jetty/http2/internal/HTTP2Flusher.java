@@ -36,6 +36,8 @@ import org.eclipse.jetty.http2.hpack.HpackException;
 import org.eclipse.jetty.io.EndPoint;
 import org.eclipse.jetty.io.EofException;
 import org.eclipse.jetty.io.RetainableByteBuffer;
+import org.eclipse.jetty.util.Callback;
+import org.eclipse.jetty.util.ExceptionUtil;
 import org.eclipse.jetty.util.IteratingCallback;
 import org.eclipse.jetty.util.component.Dumpable;
 import org.eclipse.jetty.util.thread.AutoLock;
@@ -64,6 +66,49 @@ public class HTTP2Flusher extends IteratingCallback implements Dumpable
         EndPoint endPoint = session.getEndPoint();
         boolean direct = endPoint != null && endPoint.getConnection() instanceof HTTP2Connection http2Connection && http2Connection.isUseOutputDirectByteBuffers();
         this.accumulator = new RetainableByteBuffer.DynamicCapacity(session.getGenerator().getByteBufferPool(), direct, -1);
+    }
+
+    public Callback cancel(HTTP2Stream http2Stream, Throwable cause, Callback callback)
+    {
+        try (AutoLock ignored = lock.lock())
+        {
+            entries.removeIf(entry -> entry.isFor(http2Stream));
+            pendingEntries.removeIf(entry -> entry.isFor(http2Stream));
+
+            boolean processed = false;
+            for (HTTP2Session.Entry entry : processedEntries)
+            {
+                if (entry.isFor(http2Stream))
+                {
+                    processed = true;
+                    break;
+                }
+            }
+
+            // If no frames for the stream have been processed, then we are done!
+            if (!processed)
+                return callback;
+
+            return new Callback.Nested(callback)
+            {
+                // TODO this needs to look at the ICB state and if the write has completed, then it can pass through
+                //      the success/fail call.   Otherwise it needs to just return and setup a callback from the ICB so
+                //      that the nested callback is called once the write is complete (It probably needs to capture the failed
+                //      exception to convert any succeeded call into a failed call as well)
+                @Override
+                public void failed(Throwable x)
+                {
+                    ExceptionUtil.addSuppressedIfNotAssociated(cause, x);
+                    super.failed(cause);
+                }
+
+                @Override
+                public void succeeded()
+                {
+                    super.failed(cause);
+                }
+            };
+        }
     }
 
     @Override

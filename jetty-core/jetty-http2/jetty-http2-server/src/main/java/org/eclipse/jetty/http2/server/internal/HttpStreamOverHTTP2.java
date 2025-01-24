@@ -437,6 +437,12 @@ public class HttpStreamOverHTTP2 implements HttpStream, HTTP2Channel.Server
         }
     }
 
+    @Override
+    public Callback cancelSend(Throwable cause, Callback callback)
+    {
+        return _stream.cancelWrite(cause, callback);
+    }
+
     private HttpFields retrieveTrailers()
     {
         Supplier<HttpFields> supplier = _responseMetaData.getTrailersSupplier();

@@ -84,13 +84,15 @@ public interface HttpStream extends Callback
 
     /**
      * Cancel any {@link #send(MetaData.Request, MetaData.Response, boolean, ByteBuffer, Callback)} call in progress.
+     *
      * @param cause The cause of the cancellation
-     * @return The callback passed to the {@link #send(MetaData.Request, MetaData.Response, boolean, ByteBuffer, Callback)},
-     * possibly wrapped, that must now be completed by the caller.
+     * @param callback The callback to ultimately {@link Callback#failed(Throwable) fail} after the cancellation
+     * @return A {@link Callback} that must be {@link Callback#failed(Throwable) fail} to complete the cancellation
+     *         and ultimately invoke the passed {@link Callback} (potentially in a different Thread).
      */
-    default Callback cancelSend(Throwable cause)
+    default Callback cancelSend(Throwable cause, Callback callback)
     {
-        return null;
+        return callback;
     }
 
     /**

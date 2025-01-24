@@ -47,6 +47,7 @@ import org.eclipse.jetty.io.CyclicTimeouts;
 import org.eclipse.jetty.io.EofException;
 import org.eclipse.jetty.util.Attachable;
 import org.eclipse.jetty.util.Callback;
+import org.eclipse.jetty.util.ExceptionUtil;
 import org.eclipse.jetty.util.NanoTime;
 import org.eclipse.jetty.util.Promise;
 import org.eclipse.jetty.util.component.Dumpable;
@@ -206,6 +207,33 @@ public class HTTP2Stream implements Stream, Attachable, Closeable, Callback, Dum
             failure = new WritePendingException();
         callback.failed(failure);
         return false;
+    }
+
+    public Callback cancelWrite(Throwable cause, Callback callback)
+    {
+        try (AutoLock ignored = lock.lock())
+        {
+            if (failure != null)
+            {
+                ExceptionUtil.addSuppressedIfNotAssociated(failure, cause);
+                return callback;
+            }
+
+            if (this.sendCallback == null || dataQueue.isEmpty())
+                return callback;
+
+            return session.cancel(this,
+                cause, Callback.from(() ->
+                {
+                    try (AutoLock ignored2 = lock.lock())
+                    {
+                        // Drain flow control after write is complete
+                        int flowControlLength = drain();
+                        session.dataConsumed(this, flowControlLength);
+                    }
+
+                }, callback));
+        }
     }
 
     @Override

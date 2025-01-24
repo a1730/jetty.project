@@ -838,6 +838,11 @@ public abstract class HTTP2Session extends ContainerLifeCycle implements Session
         }
     }
 
+    public Callback cancel(HTTP2Stream http2Stream, Throwable cause, Callback callback)
+    {
+        return flusher.cancel(http2Stream, cause, callback);
+    }
+
     protected HTTP2Stream createLocalStream(int streamId, MetaData.Request request, Consumer<Throwable> failFn)
     {
         while (true)
@@ -1289,6 +1294,11 @@ public abstract class HTTP2Session extends ContainerLifeCycle implements Session
         public Frame frame()
         {
             return frame;
+        }
+
+        public boolean isFor(HTTP2Stream stream)
+        {
+            return stream == this.stream;
         }
 
         public abstract int getFrameBytesGenerated();

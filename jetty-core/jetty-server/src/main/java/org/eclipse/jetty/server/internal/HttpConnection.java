@@ -1536,9 +1536,10 @@ public class HttpConnection extends AbstractMetaDataConnection implements Runnab
         }
 
         @Override
-        public Callback cancelSend(Throwable cause)
+        public Callback cancelSend(Throwable cause, Callback callback)
         {
-            return _sendCallback.cancel(cause);
+            // We know that the SendCallback#cancel call will never block, so we can just combine here
+            return Callback.combine(_sendCallback.cancel(cause), callback);
         }
 
         @Override
