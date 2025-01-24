@@ -748,8 +748,8 @@ public class ArrayByteBufferPool implements ByteBufferPool, Dumpable
                 // The bucket indices are the powers of 2, but those powers up to minCapacity are skipped so they must be
                 // substracted when computing the index and added when computing the capacity; so if minCapacity is 1024, any
                 // number from 0 to 1024 must return index 0, and index 0 must return capacity 1024.
-                c -> Integer.SIZE - Integer.numberOfLeadingZeros(c - 1) - MathUtils.log2Ceiled(computeMinCapacity(minCapacity)),
-                i -> 1 << i + MathUtils.log2Ceiled(computeMinCapacity(minCapacity))
+                c -> Integer.SIZE - Integer.numberOfLeadingZeros(c - 1) - MathUtils.ceilLog2(computeMinCapacity(minCapacity)),
+                i -> 1 << i + MathUtils.ceilLog2(computeMinCapacity(minCapacity))
             );
         }
 

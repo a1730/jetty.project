@@ -99,7 +99,7 @@ public class MathUtils
      * @param value An integer
      * @return the binary logarithm of the given number ceiled to the next power of two.
      */
-    public static int log2Ceiled(int value)
+    public static int ceilLog2(int value)
     {
         return Integer.numberOfTrailingZeros(Integer.highestOneBit(ceilToNextPowerOfTwo(value)));
     }

@@ -35,12 +35,12 @@ public class MathUtilTest
     }
 
     @Test
-    public void testLog2Ceiled()
+    public void testCeilLog2()
     {
-        assertThrows(IllegalArgumentException.class, () -> MathUtils.log2Ceiled(-1));
-        assertThat(MathUtils.log2Ceiled(0), is(0));
-        assertThat(MathUtils.log2Ceiled(800), is(10));
-        assertThat(MathUtils.log2Ceiled(1024), is(10));
-        assertThat(MathUtils.log2Ceiled(Integer.MAX_VALUE), is(30));
+        assertThrows(IllegalArgumentException.class, () -> MathUtils.ceilLog2(-1));
+        assertThat(MathUtils.ceilLog2(0), is(0));
+        assertThat(MathUtils.ceilLog2(800), is(10));
+        assertThat(MathUtils.ceilLog2(1024), is(10));
+        assertThat(MathUtils.ceilLog2(Integer.MAX_VALUE), is(30));
     }
 }
