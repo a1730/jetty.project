@@ -207,17 +207,14 @@ public class WebInfConfiguration extends AbstractConfiguration
                 // Look for sibling directory.
                 Path extractedWebAppDir = null;
 
-                if (war != null)
-                {
-                    Path warPath = context.getResourceFactory().newResource(war).getPath();
+                Path warPath = webApp.getPath();
 
-                    // look for a sibling like "foo/" to a "foo.war"
-                    if (warPath != null && FileID.isWebArchive(warPath) && Files.exists(warPath))
-                    {
-                        Path sibling = warPath.getParent().resolve(FileID.getBasename(warPath));
-                        if (Files.exists(sibling) && Files.isDirectory(sibling) && Files.isWritable(sibling))
-                            extractedWebAppDir = sibling;
-                    }
+                // look for a sibling like "foo/" to a "foo.war"
+                if (warPath != null && FileID.isWebArchive(warPath) && Files.exists(warPath))
+                {
+                    Path sibling = warPath.getParent().resolve(FileID.getBasename(warPath));
+                    if (Files.exists(sibling) && Files.isDirectory(sibling) && Files.isWritable(sibling))
+                        extractedWebAppDir = sibling;
                 }
 
                 if (extractedWebAppDir == null)
