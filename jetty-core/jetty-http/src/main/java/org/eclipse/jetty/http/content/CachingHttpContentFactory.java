@@ -241,7 +241,6 @@ public class CachingHttpContentFactory implements HttpContent.Factory
         if (!isCacheable(httpContent))
             return httpContent;
 
-        // The re-mapping function may be run multiple times by compute.
         AtomicBoolean added = new AtomicBoolean();
         cachingHttpContent = _cache.computeIfAbsent(path, key ->
         {
@@ -406,7 +405,12 @@ public class CachingHttpContentFactory implements HttpContent.Factory
         @Override
         public boolean retain()
         {
-            return _referenceCount.tryRetain();
+            // Retain only if the content is still in the cache.
+            return _cache.computeIfPresent(_cacheKey, (s, cachingHttpContent) ->
+            {
+                _referenceCount.retain();
+                return cachingHttpContent;
+            }) != null;
         }
 
         @Override

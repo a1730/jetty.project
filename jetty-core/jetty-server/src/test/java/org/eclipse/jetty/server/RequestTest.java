@@ -19,9 +19,11 @@ import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Stream;
 
+import org.eclipse.jetty.http.ComplianceViolation;
 import org.eclipse.jetty.http.HttpCompliance;
 import org.eclipse.jetty.http.HttpCookie;
 import org.eclipse.jetty.http.HttpHeader;
@@ -33,6 +35,7 @@ import org.eclipse.jetty.server.LocalConnector.LocalEndPoint;
 import org.eclipse.jetty.server.handler.ContextHandler;
 import org.eclipse.jetty.server.handler.DumpHandler;
 import org.eclipse.jetty.util.Callback;
+import org.eclipse.jetty.util.Fields;
 import org.eclipse.jetty.util.component.LifeCycle;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -40,6 +43,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
@@ -49,6 +53,7 @@ import static org.hamcrest.Matchers.not;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class RequestTest
 {
@@ -539,6 +544,77 @@ public class RequestTest
             {
                 assertThat(response, not(containsString(notContainsCookie)));
             }
+        }
+    }
+
+    /**
+     * Test to ensure that response.write() will add Content-Length on HTTP/1.1 responses.
+     */
+    @ParameterizedTest
+    @ValueSource(strings = { "true", "false"})
+    public void testBadUtf8Query(boolean allowBadUtf8) throws Exception
+    {
+        server.stop();
+        List<ComplianceViolation.Event> events = new CopyOnWriteArrayList<>();
+        ComplianceViolation.Listener listener = new ComplianceViolation.Listener()
+        {
+            @Override
+            public void onComplianceViolation(ComplianceViolation.Event event)
+            {
+                events.add(event);
+            }
+        };
+
+        if (allowBadUtf8)
+        {
+            for (Connector connector : server.getConnectors())
+            {
+                HttpConnectionFactory httpConnectionFactory = connector.getConnectionFactory(HttpConnectionFactory.class);
+                if (httpConnectionFactory != null)
+                {
+                    HttpConfiguration httpConfiguration = httpConnectionFactory.getHttpConfiguration();
+                    httpConfiguration.setUriCompliance(UriCompliance.DEFAULT.with("test", UriCompliance.Violation.BAD_UTF8_ENCODING));
+                    httpConfiguration.addComplianceViolationListener(listener);
+                }
+            }
+        }
+
+        server.setHandler(new Handler.Abstract.NonBlocking()
+        {
+            @Override
+            public boolean handle(Request request, Response response, Callback callback)
+            {
+                if (allowBadUtf8)
+                {
+                    Fields fields = Request.extractQueryParameters(request);
+                    assertThat(fields.getValue("param"), is("bad_�"));
+                    assertThat(fields.getValue("other"), is("short�"));
+                }
+                else
+                {
+                    assertThrows(IllegalArgumentException.class, () -> Request.extractQueryParameters(request));
+                }
+                callback.succeeded();
+                return true;
+            }
+        });
+        server.start();
+
+        String request = """
+            GET /foo?param=bad_%e0%b8&other=short%a HTTP/1.1\r
+            Host: local\r
+            \r
+            """;
+        HttpTester.Response response = HttpTester.parseResponse(connector.getResponse(request));
+        assertEquals(HttpStatus.OK_200, response.getStatus());
+        if (allowBadUtf8)
+        {
+            assertThat(events.size(), is(1));
+            assertThat(events.get(0).violation(), is(UriCompliance.Violation.BAD_UTF8_ENCODING));
+        }
+        else
+        {
+            assertThat(events.size(), is(0));
         }
     }
 }
