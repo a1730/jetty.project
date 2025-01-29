@@ -18,7 +18,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.security.Security;
 
-import org.bouncycastle.jcajce.provider.BouncyCastleFipsProvider;
+import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.bouncycastle.jsse.provider.BouncyCastleJsseProvider;
 import org.eclipse.jetty.alpn.server.ALPNServerConnectionFactory;
 import org.eclipse.jetty.client.ContentResponse;
@@ -49,7 +49,7 @@ public class BouncyCastleHTTP2ServerTest
     static
     {
         /* Required to instantiate a DEFAULT SecureRandom */
-        Security.insertProviderAt(new BouncyCastleFipsProvider(), 1);
+        Security.insertProviderAt(new BouncyCastleProvider(), 1);
         Security.insertProviderAt(new BouncyCastleJsseProvider(), 2);
     }
 

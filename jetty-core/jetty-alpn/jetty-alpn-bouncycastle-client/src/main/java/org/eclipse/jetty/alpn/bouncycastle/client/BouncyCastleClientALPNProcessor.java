@@ -13,13 +13,10 @@
 
 package org.eclipse.jetty.alpn.bouncycastle.client;
 
-import java.security.Security;
 import java.util.List;
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLParameters;
 
-import org.bouncycastle.jcajce.provider.BouncyCastleFipsProvider;
-import org.bouncycastle.jsse.provider.BouncyCastleJsseProvider;
 import org.eclipse.jetty.alpn.client.ALPNClientConnection;
 import org.eclipse.jetty.io.Connection;
 import org.eclipse.jetty.io.ssl.ALPNProcessor;
@@ -31,24 +28,6 @@ import org.slf4j.LoggerFactory;
 public class BouncyCastleClientALPNProcessor implements ALPNProcessor.Client
 {
     private static final Logger LOG = LoggerFactory.getLogger(BouncyCastleClientALPNProcessor.class);
-
-    @Override
-    public void init()
-    {
-        /* Required to instantiate a DEFAULT SecureRandom */
-        if (Security.getProvider(BouncyCastleFipsProvider.PROVIDER_NAME) == null)
-        {
-            Security.addProvider(new BouncyCastleFipsProvider());
-            if (LOG.isDebugEnabled())
-                LOG.debug("Added BouncyCastle FIPS provider");
-        }
-        if (Security.getProvider(BouncyCastleJsseProvider.PROVIDER_NAME) == null)
-        {
-            Security.addProvider(new BouncyCastleJsseProvider());
-            if (LOG.isDebugEnabled())
-                LOG.debug("Added BouncyCastle JSSE provider");
-        }
-    }
 
     @Override
     public boolean appliesTo(SSLEngine sslEngine)

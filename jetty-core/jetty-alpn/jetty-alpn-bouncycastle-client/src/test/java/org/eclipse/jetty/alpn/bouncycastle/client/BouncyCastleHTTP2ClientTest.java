@@ -19,7 +19,7 @@ import java.security.Security;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
-import org.bouncycastle.jcajce.provider.BouncyCastleFipsProvider;
+import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.bouncycastle.jsse.provider.BouncyCastleJsseProvider;
 import org.eclipse.jetty.http.HttpFields;
 import org.eclipse.jetty.http.HttpURI;
@@ -51,7 +51,7 @@ public class BouncyCastleHTTP2ClientTest
         Assumptions.assumeTrue(canConnectTo(host, port));
 
         /* Required to instantiate a DEFAULT SecureRandom */
-        Security.insertProviderAt(new BouncyCastleFipsProvider(), 1);
+        Security.insertProviderAt(new BouncyCastleProvider(), 1);
         Security.insertProviderAt(new BouncyCastleJsseProvider(), 2);
         SslContextFactory.Client sslContextFactory = new SslContextFactory.Client();
         sslContextFactory.setProvider(BouncyCastleJsseProvider.PROVIDER_NAME);

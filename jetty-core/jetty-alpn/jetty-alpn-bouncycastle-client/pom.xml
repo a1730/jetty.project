@@ -12,14 +12,11 @@
   <name>Core :: ALPN :: Bouncy Castle Client</name>
 
   <properties>
+    <bouncycastle.version>1.70</bouncycastle.version>
     <bundle-symbolic-name>${project.groupId}.alpn.bouncycastle.client</bundle-symbolic-name>
   </properties>
 
   <dependencies>
-    <dependency>
-      <groupId>org.bouncycastle</groupId>
-      <artifactId>bctls-fips</artifactId>
-    </dependency>
     <dependency>
       <groupId>org.eclipse.jetty</groupId>
       <artifactId>jetty-alpn-client</artifactId>
@@ -27,6 +24,12 @@
     <dependency>
       <groupId>org.slf4j</groupId>
       <artifactId>slf4j-api</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.bouncycastle</groupId>
+      <artifactId>bctls-jdk15to18</artifactId>
+      <version>${bouncycastle.version}</version>
+      <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>org.eclipse.jetty</groupId>
