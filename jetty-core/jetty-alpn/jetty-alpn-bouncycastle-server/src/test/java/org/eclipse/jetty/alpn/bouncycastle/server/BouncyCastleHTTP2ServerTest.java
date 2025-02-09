@@ -48,7 +48,7 @@ public class BouncyCastleHTTP2ServerTest
 {
     static
     {
-        /* Required to instantiate a DEFAULT SecureRandom */
+        // Required to provide a SecureRandom with name "DEFAULT" used by the BC JSSE provider.
         Security.insertProviderAt(new BouncyCastleProvider(), 1);
         Security.insertProviderAt(new BouncyCastleJsseProvider(), 2);
     }

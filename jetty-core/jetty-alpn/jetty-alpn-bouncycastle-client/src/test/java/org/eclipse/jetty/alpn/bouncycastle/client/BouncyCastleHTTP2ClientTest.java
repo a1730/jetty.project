@@ -50,7 +50,7 @@ public class BouncyCastleHTTP2ClientTest
 
         Assumptions.assumeTrue(canConnectTo(host, port));
 
-        /* Required to instantiate a DEFAULT SecureRandom */
+        // Required to provide a SecureRandom with name "DEFAULT" used by the BC JSSE provider.
         Security.insertProviderAt(new BouncyCastleProvider(), 1);
         Security.insertProviderAt(new BouncyCastleJsseProvider(), 2);
         SslContextFactory.Client sslContextFactory = new SslContextFactory.Client();

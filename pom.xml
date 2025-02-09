@@ -166,6 +166,7 @@
     <asm.version>9.7.1</asm.version>
     <awaitility.version>4.2.2</awaitility.version>
     <bndlib.version>7.0.0</bndlib.version>
+    <bouncycastle.version>1.80</bouncycastle.version>
     <build-helper.maven.plugin.version>3.6.0</build-helper.maven.plugin.version>
     <build-support.version>1.5</build-support.version>
     <buildnumber.maven.plugin.version>3.2.1</buildnumber.maven.plugin.version>
